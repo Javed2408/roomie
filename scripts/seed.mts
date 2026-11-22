@@ -22,6 +22,7 @@ import { createClient, type User } from "@supabase/supabase-js";
 import type {
   BioPrompt,
   Gender,
+  LifestylePreferencesRow,
   ListingRow,
   MoveInTimeframe,
   Society,
@@ -44,7 +45,10 @@ type Flat = Pick<
   | "setup_cost"
   | "amenities"
   | "photos"
->;
+> &
+  Partial<Pick<ListingRow, "description" | "current_flatmates">>;
+
+type Lifestyle = Omit<LifestylePreferencesRow, "profile_id" | "created_at" | "updated_at">;
 
 type SampleStudent = {
   /** Becomes the email: <handle>@seed.roomie.test */
@@ -97,6 +101,8 @@ const STUDENTS: SampleStudent[] = [
       setup_cost: 0,
       amenities: ["AC", "Wi-Fi", "Cook", "Maid", "No Owner Interference"],
       photos: ["/seed/flat-abode-living.svg", "/seed/flat-abode-bedroom.svg"],
+      description: "Bright 3BHK with a quiet room free, ten minutes from the Arch gate.",
+      current_flatmates: 2,
     },
   },
   {
@@ -132,6 +138,8 @@ const STUDENTS: SampleStudent[] = [
       setup_cost: 0,
       amenities: ["AC", "Washing Machine", "Power Backup", "Balcony"],
       photos: ["/seed/flat-estancia-bedroom.svg", "/seed/flat-estancia-balcony.svg"],
+      description: "Calm 3BHK with a balcony full of plants. One room free.",
+      current_flatmates: 2,
     },
   },
   {
@@ -167,6 +175,8 @@ const STUDENTS: SampleStudent[] = [
       setup_cost: 0,
       amenities: ["Wi-Fi", "Geyser", "Bachelor Friendly"],
       photos: ["/seed/flat-akshaya-bedroom.svg", "/seed/flat-akshaya-living.svg"],
+      description: "Easy-going 2BHK, gaming setup in the hall, owner never visits.",
+      current_flatmates: 1,
     },
   },
   {
@@ -247,6 +257,58 @@ const STUDENTS: SampleStudent[] = [
     looking: { societies: ["Green Pearl", "Estancia"], budget: 13000, moveIn: "july" },
   },
 ];
+
+/** Lifestyle answers and interests (migration 008), by handle. */
+const DETAILS: Record<string, { lifestyle: Lifestyle; interests: string[] }> = {
+  "aarav.sharma": {
+    lifestyle: {
+      sleep_schedule: "night_owl", cleanliness: "tidy", social_life: "balanced",
+      study_habits: "home_with_music", guests: "sometimes", noise_tolerance: "medium",
+      smoking: "non_smoker", food_habits: "non_vegetarian", personality: "ambivert",
+    },
+    interests: ["coding", "cricket", "gaming"],
+  },
+  "diya.nair": {
+    lifestyle: {
+      sleep_schedule: "early_bird", cleanliness: "very_tidy", social_life: "homebody",
+      study_habits: "quiet_at_home", guests: "rarely", noise_tolerance: "low",
+      smoking: "non_smoker", food_habits: "vegetarian", personality: "introvert",
+    },
+    interests: ["reading", "cooking", "yoga"],
+  },
+  "rohan.verma": {
+    lifestyle: {
+      sleep_schedule: "night_owl", cleanliness: "relaxed", social_life: "outgoing",
+      study_habits: "varies", guests: "often", noise_tolerance: "high",
+      smoking: "non_smoker", food_habits: "non_vegetarian", personality: "extrovert",
+    },
+    interests: ["gaming", "football", "music"],
+  },
+  "ananya.iyer": {
+    lifestyle: {
+      sleep_schedule: "flexible", cleanliness: "very_tidy", social_life: "balanced",
+      study_habits: "library", guests: "rarely", noise_tolerance: "low",
+      smoking: "non_smoker", food_habits: "vegetarian", personality: "ambivert",
+    },
+    interests: ["coding", "hackathons", "movies"],
+  },
+  "karthik.menon": {
+    lifestyle: {
+      sleep_schedule: "early_bird", cleanliness: "tidy", social_life: "outgoing",
+      study_habits: "home_with_music", guests: "sometimes", noise_tolerance: "medium",
+      smoking: "non_smoker", food_habits: "non_vegetarian", personality: "extrovert",
+    },
+    interests: ["football", "cooking", "gym"],
+  },
+  "sneha.reddy": {
+    lifestyle: {
+      sleep_schedule: "early_bird", cleanliness: "tidy", social_life: "balanced",
+      study_habits: "quiet_at_home", guests: "rarely", noise_tolerance: "low",
+      smoking: "non_smoker", food_habits: "eggetarian", personality: "ambivert",
+    },
+    interests: ["yoga", "startups", "travel"],
+  },
+};
 
 // --- Setup ---------------------------------------------------------------------
 
@@ -349,14 +411,39 @@ async function seed() {
     }
 
     if (student.mode === "have_flat") {
-      const { error } = await supabase
+      // Update their listing if it exists, otherwise create it.
+      const { data: current } = await supabase
         .from("listings")
-        .upsert({ owner_id: id, ...student.flat, is_active: true }, { onConflict: "owner_id" });
+        .select("id")
+        .eq("owner_id", id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const flat = { ...student.flat, is_active: true };
+      const { error } = current
+        ? await supabase.from("listings").update(flat).eq("id", current.id)
+        : await supabase.from("listings").insert({ owner_id: id, ...flat });
       if (error) {
         throw new Error(`Couldn't save ${student.fullName}'s flat: ${error.message}`);
       }
     } else {
       await supabase.from("listings").delete().eq("owner_id", id);
+    }
+
+    // Lifestyle answers and interests.
+    const details = DETAILS[student.handle];
+    const { error: lifestyleError } = await supabase
+      .from("lifestyle_preferences")
+      .upsert({ profile_id: id, ...details.lifestyle }, { onConflict: "profile_id" });
+    await supabase.from("profile_interests").delete().eq("profile_id", id);
+    const { error: interestsError } = await supabase
+      .from("profile_interests")
+      .insert(details.interests.map((interest) => ({ profile_id: id, interest })));
+    const detailsError = lifestyleError ?? interestsError;
+    if (detailsError) {
+      throw new Error(
+        `Couldn't save ${student.fullName}'s lifestyle and interests: ${detailsError.message}. Run migrations 006 to 010 first.`,
+      );
     }
 
     const summary =

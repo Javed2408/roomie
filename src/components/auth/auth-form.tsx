@@ -10,10 +10,9 @@ import {
 
 import { authenticate, type AuthState } from "@/app/login/actions";
 import { Button } from "@/components/ui/button";
+import { SRM_EMAIL_DOMAIN as SRM_DOMAIN, isSrmEmail } from "@/lib/eligibility";
 
 type Mode = "signin" | "signup";
-
-const SRM_DOMAIN = "@srmist.edu.in";
 
 function TextInput({
   label,
@@ -41,13 +40,12 @@ function TextInput({
   );
 }
 
-/** What the badge outcome will be for the email typed so far. */
+/** Whether the email typed so far can create an account. */
 function EmailHint({ email }: { email: string }) {
-  const value = email.trim().toLowerCase();
-  if (!value.includes("@")) {
+  if (!email.includes("@")) {
     return null;
   }
-  if (value.endsWith(SRM_DOMAIN)) {
+  if (isSrmEmail(email)) {
     return (
       <p className="text-forest mt-1.5 flex items-center gap-1.5 text-sm font-medium">
         <ShieldCheck aria-hidden="true" className="size-4" />
@@ -56,8 +54,9 @@ function EmailHint({ email }: { email: string }) {
     );
   }
   return (
-    <p className="text-muted mt-1.5 text-sm">
-      Personal email: fine for testing, but it won&apos;t be SRM-verified.
+    <p className="text-accent-strong mt-1.5 flex items-center gap-1.5 text-sm font-medium">
+      <CircleAlert aria-hidden="true" className="size-4" />
+      Only {SRM_DOMAIN} addresses can create an account.
     </p>
   );
 }
@@ -82,13 +81,13 @@ export function AuthForm({ linkError }: { linkError: boolean }) {
       <div className="bg-forest-soft border-forest/20 rounded-card border p-5">
         <p className="text-forest flex items-center gap-2 font-semibold">
           <ShieldCheck aria-hidden="true" className="size-5 shrink-0" />
-          Use your {SRM_DOMAIN} email
+          Only for SRM students
         </p>
         <p className="text-charcoal/80 mt-1.5 text-sm leading-relaxed">
-          SRM addresses get the green{" "}
+          Sign up with your {SRM_DOMAIN} email and confirm it from your inbox.
+          That gives you the green{" "}
           <strong className="text-forest">Verified SRM Student</strong> badge,
-          so others know you&apos;re really a student. Personal emails work
-          for testing but stay unverified.
+          so everyone knows you&apos;re really a student.
         </p>
       </div>
 
@@ -184,16 +183,6 @@ export function AuthForm({ linkError }: { linkError: boolean }) {
               : "Sign in"}
         </Button>
       </form>
-
-      {process.env.NODE_ENV === "development" && (
-        <p className="text-muted border-line rounded-2xl border border-dashed p-3 text-xs leading-relaxed">
-          <strong>Testing tip (development only):</strong> to skip the
-          confirmation email, turn off <em>Confirm email</em> in Supabase
-          (Authentication &gt; Sign In / Providers &gt; Email). New accounts
-          then sign in straight away. Turn it back on before real students
-          use the app, or anyone could claim an SRM address.
-        </p>
-      )}
     </div>
   );
 }

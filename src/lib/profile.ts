@@ -8,11 +8,30 @@ import {
   type PublicProfile,
 } from "@/types/database";
 
+type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
+
 export type CurrentUser = {
   user: User;
   profile: PublicProfile | null;
+  /** Their main listing: the live one, or else the newest (see primaryListing). */
   listing: ListingRow | null;
 };
+
+/**
+ * A student's main listing. Students may keep several listings (migration
+ * 009) with at most one live, and today's screens show one: the live
+ * listing if there is one, otherwise the most recently created.
+ */
+export function primaryListing(supabase: SupabaseServer, ownerId: string) {
+  return supabase
+    .from("listings")
+    .select("*")
+    .eq("owner_id", ownerId)
+    .order("is_active", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+}
 
 /**
  * Onboarding is finished once the basics are in: a name and a mode.
@@ -42,7 +61,7 @@ export const getCurrentUser = cache(async function getCurrentUser(): Promise<Cur
       .select(PUBLIC_PROFILE_COLUMNS)
       .eq("id", user.id)
       .maybeSingle(),
-    supabase.from("listings").select("*").eq("owner_id", user.id).maybeSingle(),
+    primaryListing(supabase, user.id),
   ]);
   // A failed lookup (database unreachable, a migration not run yet) must not
   // look like "no profile", or pages would send the person back through

@@ -16,14 +16,16 @@ and the Potheri area), like what they see, and match with flatmates.
 
 ## Folder conventions
 
-- `src/app/` pages, routes and server actions (App Router)
+- `src/app/` pages, routes, server actions; import via `@/` (e.g. `@/lib/...`)
 - `src/components/ui/` building blocks: AppShell, Button, Card, BottomSheet
 - `src/components/feed/`, `matches/`, `chat/`, `onboarding/`, `auth/` by screen
 - `src/lib/` data loaders and rules; `src/lib/supabase/` has `client.ts`
   (browser), `server.ts` (one per request), `realtime.ts` (`subscribeAsUser`)
 - `src/types/` shared types; `database.ts` mirrors the SQL exactly
-- `supabase/migrations/` numbered, idempotent SQL, run in the SQL Editor
-- Import with the `@/` alias, e.g. `@/components/ui/button`
+- `supabase/migrations/` numbered, idempotent SQL; `tests/db/` (`npm test`)
+- Data model: `docs/architecture/phase-1-assessment.md`. `profiles.mode` and
+  its preference columns are legacy mirrors synced by triggers; group
+  membership changes only through the group RPCs.
 
 ## Design rules
 
@@ -53,5 +55,5 @@ and the Potheri area), like what they see, and match with flatmates.
 
 ## Before finishing any phase
 
-Run `npm run lint` and `npm run build` and fix every TypeScript, lint or
-build error. Do not report a phase as done until both pass.
+Run `npm run lint`, `npm test` and `npm run build`; fix every error. Do not
+report a phase as done until all three pass.

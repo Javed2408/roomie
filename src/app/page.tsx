@@ -71,6 +71,13 @@ const SAMPLE: Candidate = {
     photos: ["/seed/flat-abode-living.svg", "/seed/flat-abode-bedroom.svg"],
     is_active: true,
     created_at: "2026-01-01T00:00:00Z",
+    description: null,
+    available_rooms: 1,
+    current_flatmates: 2,
+    available_from: null,
+    preferred_flatmate_gender: "any",
+    flatmate_preferences: null,
+    updated_at: "2026-01-01T00:00:00Z",
   },
 };
 

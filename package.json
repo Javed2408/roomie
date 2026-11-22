@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --disable-warning=ExperimentalWarning --test \"tests/**/*.test.mts\"",
     "seed": "node --env-file=.env.local --disable-warning=ExperimentalWarning scripts/seed.mts",
     "unseed": "node --env-file=.env.local --disable-warning=ExperimentalWarning scripts/seed.mts --remove",
     "icons": "node --disable-warning=ExperimentalWarning scripts/generate-icons.mts"
@@ -20,6 +21,7 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.17",
     "@tailwindcss/turbopack": "4.3.3",
     "@types/node": "^20",
     "@types/react": "^19",

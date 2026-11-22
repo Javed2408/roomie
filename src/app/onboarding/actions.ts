@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { MEDIA_BUCKET, isOwnMediaUrl } from "@/lib/media";
 import { checkAll, type OnboardingInput, type Problems } from "@/lib/onboarding";
+import { primaryListing } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 
 export type SaveResult = { error: string; problems?: Problems };
@@ -60,13 +61,17 @@ export async function saveOnboarding(
   }
 
   if (isOwner) {
-    // One listing per owner: create it, or update the existing one.
-    const { error: listingError } = await supabase
-      .from("listings")
-      .upsert(
-        { ...input.listing!, owner_id: user.id, is_active: true },
-        { onConflict: "owner_id" },
-      );
+    // Update their main listing (and make sure it's live), or create their
+    // first one. Students may keep several listings, so this goes by id.
+    const { data: existing, error: lookupError } = await primaryListing(supabase, user.id);
+    const fields = { ...input.listing!, is_active: true };
+    let listingError = lookupError;
+    if (!listingError) {
+      const saved = existing
+        ? await supabase.from("listings").update(fields).eq("id", existing.id)
+        : await supabase.from("listings").insert({ ...fields, owner_id: user.id });
+      listingError = saved.error;
+    }
     if (listingError) {
       return {
         error: `Your profile was saved, but the flat couldn't be: ${listingError.message}`,
@@ -94,17 +99,21 @@ export async function saveOnboarding(
  */
 async function removeUnusedMedia(userId: string): Promise<void> {
   const supabase = await createClient();
-  const [{ data: profile }, { data: listing }, { data: files }] =
-    await Promise.all([
-      supabase.from("profiles").select("avatar_url").eq("id", userId).maybeSingle(),
-      supabase.from("listings").select("photos").eq("owner_id", userId).maybeSingle(),
-      supabase.storage.from(MEDIA_BUCKET).list(userId, { limit: 1000 }),
-    ]);
-  if (!files) {
+  const [profileResult, listingsResult, { data: files }] = await Promise.all([
+    supabase.from("profiles").select("avatar_url").eq("id", userId).maybeSingle(),
+    // Every listing, live or not: their photos all stay.
+    supabase.from("listings").select("photos").eq("owner_id", userId),
+    supabase.storage.from(MEDIA_BUCKET).list(userId, { limit: 1000 }),
+  ]);
+  // If we can't tell what's in use, delete nothing.
+  if (!files || profileResult.error || listingsResult.error) {
     return;
   }
   const inUse = new Set(
-    [profile?.avatar_url, ...(listing?.photos ?? [])]
+    [
+      profileResult.data?.avatar_url,
+      ...(listingsResult.data ?? []).flatMap((listing) => listing.photos),
+    ]
       .filter((url): url is string => Boolean(url))
       .map((url) => url.split(`/public/${MEDIA_BUCKET}/`)[1]),
   );
@@ -136,9 +145,13 @@ export async function setListingActive(active: boolean): Promise<void> {
       redirect("/account");
     }
   }
-  await supabase
-    .from("listings")
-    .update({ is_active: active })
-    .eq("owner_id", user.id);
+  // The main listing only: a student can keep several, one of them live.
+  const { data: listing } = await primaryListing(supabase, user.id);
+  if (listing) {
+    await supabase
+      .from("listings")
+      .update({ is_active: active })
+      .eq("id", listing.id);
+  }
   redirect("/account");
 }

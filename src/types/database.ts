@@ -1,6 +1,6 @@
 /**
  * TypeScript shapes of the database, matching
- * `supabase/migrations/` (001 to 005) exactly. Keep the two in sync: every
+ * `supabase/migrations/` (001 to 010) exactly. Keep the two in sync: every
  * change to the SQL needs the same change here.
  *
  * `Database` is in the format supabase-js expects, so queries are checked:
@@ -12,6 +12,25 @@
 // --- Allowed values (each mirrors a CHECK constraint) ------------------------
 
 import type {
+  Cleanliness,
+  DiscoverHousing,
+  FoodHabit,
+  GenderPreference,
+  GroupMembershipStatus,
+  GroupRole,
+  GroupStatus,
+  GuestFrequency,
+  HousingStatus,
+  NoiseTolerance,
+  Personality,
+  RoomType,
+  Seeking,
+  SleepSchedule,
+  SmokingHabit,
+  SocialLife,
+  StudyHabits,
+} from "@/lib/constants/preferences";
+import type {
   Amenity,
   BhkType,
   MoveInTimeframe,
@@ -22,17 +41,40 @@ export const GENDERS = ["male", "female", "other"] as const;
 export type Gender = (typeof GENDERS)[number];
 
 export const MODES = ["have_flat", "need_flat"] as const;
-/** have_flat: has a flat with space. need_flat: looking for one. */
+/**
+ * Legacy: have_flat / need_flat. A mirror of housing_status (migration
+ * 007), kept in sync by the database. New code should use HousingStatus.
+ */
 export type Mode = (typeof MODES)[number];
 
 // Societies, BHK types, amenities and move-in timeframes are defined once
-// in `@/lib/constants/prompts` (with the user-facing labels).
+// in `@/lib/constants/prompts`; housing, discovery, lifestyle and group
+// values in `@/lib/constants/preferences` (both with user-facing labels).
 export type {
   Amenity,
   BhkType,
   MoveInTimeframe,
   Society,
 } from "@/lib/constants/prompts";
+export type {
+  Cleanliness,
+  DiscoverHousing,
+  FoodHabit,
+  GenderPreference,
+  GroupMembershipStatus,
+  GroupRole,
+  GroupStatus,
+  GuestFrequency,
+  HousingStatus,
+  NoiseTolerance,
+  Personality,
+  RoomType,
+  Seeking,
+  SleepSchedule,
+  SmokingHabit,
+  SocialLife,
+  StudyHabits,
+} from "@/lib/constants/preferences";
 
 export type SwipeAction = "like" | "pass";
 export type LikedTargetType = "photo" | "prompt" | "listing";
@@ -53,14 +95,16 @@ export type ProfileRow = {
   gender: Gender | null;
   year_of_study: number | null;
   department: string | null;
+  /** Legacy mirror of housing_status (007). */
   mode: Mode | null;
   /** Set by the database only: an @srmist.edu.in address that is confirmed. */
   is_srm_verified: boolean;
+  /** The main photo; mirrors profile_photos position 0 (008). */
   avatar_url: string | null;
   bio_prompts: BioPrompt[];
-  /** need_flat preferences (migration 002). */
+  /** Legacy mirrors of practical_preferences (008); first added in 002. */
   preferred_societies: Society[];
-  /** Whole rupees per month, per person. */
+  /** Whole rupees per month, per person. Mirrors practical_preferences.budget_max. */
   max_budget: number | null;
   move_in_timeframe: MoveInTimeframe | null;
   /**
@@ -73,11 +117,16 @@ export type ProfileRow = {
   updated_at: string;
 }
 
+/**
+ * An accommodation listing. A student may have several (up to 10), but at
+ * most one live (`is_active`) at a time (migration 009).
+ */
 export type ListingRow = {
   id: string;
   owner_id: string;
   society: Society;
   bhk_type: BhkType;
+  /** Spots open: the available occupancy. */
   vacant_spots: number;
   /** Whole rupees per month. */
   rent_per_person: number;
@@ -89,6 +138,18 @@ export type ListingRow = {
   photos: string[];
   is_active: boolean;
   created_at: string;
+  // --- Added in 009 ---
+  description: string | null;
+  /** Rooms available (1-10). */
+  available_rooms: number;
+  /** People already living there (0-10). */
+  current_flatmates: number;
+  /** ISO date; null means available now. */
+  available_from: string | null;
+  preferred_flatmate_gender: GenderPreference;
+  /** Short notes on the flatmate wanted. */
+  flatmate_preferences: string | null;
+  updated_at: string;
 }
 
 export type SwipeRow = {
@@ -117,6 +178,115 @@ export type MessageRow = {
   sender_id: string;
   content: string;
   created_at: string;
+}
+
+// --- Student details around the profile (007, 008) ---------------------------
+
+/** What a student has right now; independent of whom they discover. */
+export type HousingStatusRow = {
+  profile_id: string;
+  status: HousingStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Whom a student wants to see, and how they want to live. */
+export type DiscoveryPreferencesRow = {
+  profile_id: string;
+  discover_housing: DiscoverHousing;
+  seeking: Seeking;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ProfilePhotoRow = {
+  id: string;
+  profile_id: string;
+  url: string;
+  /** 0 is the main photo (mirrors profiles.avatar_url); up to 5. */
+  position: number;
+  created_at: string;
+}
+
+/** The catalogue of interests students pick from. */
+export type InterestRow = {
+  slug: string;
+  label: string;
+}
+
+export type ProfileInterestRow = {
+  profile_id: string;
+  interest: string;
+  created_at: string;
+}
+
+/** Lifestyle and personality (all optional). */
+export type LifestylePreferencesRow = {
+  profile_id: string;
+  sleep_schedule: SleepSchedule | null;
+  cleanliness: Cleanliness | null;
+  social_life: SocialLife | null;
+  study_habits: StudyHabits | null;
+  guests: GuestFrequency | null;
+  noise_tolerance: NoiseTolerance | null;
+  smoking: SmokingHabit | null;
+  food_habits: FoodHabit | null;
+  personality: Personality | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Budget, place and requirements. Every profile has one row. */
+export type PracticalPreferencesRow = {
+  profile_id: string;
+  /** Whole rupees per month, per person. */
+  budget_min: number | null;
+  budget_max: number | null;
+  preferred_societies: Society[];
+  move_in_timeframe: MoveInTimeframe | null;
+  room_type: RoomType | null;
+  preferred_bhk_types: BhkType[];
+  required_amenities: Amenity[];
+  flatmate_gender: GenderPreference | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// --- Groups (010) ---------------------------------------------------------------
+
+export type GroupRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  avatar_url: string | null;
+  /** Null if the creator's account was deleted. */
+  created_by: string | null;
+  max_members: number;
+  preferred_gender: GenderPreference;
+  requirements: string | null;
+  preferred_societies: Society[];
+  /** Whole rupees per month, per person. */
+  budget_max: number | null;
+  move_in_timeframe: MoveInTimeframe | null;
+  preferred_bhk_types: BhkType[];
+  status: GroupStatus;
+  is_discoverable: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Change these only through the group functions (Database["public"]["Functions"]). */
+export type GroupMemberRow = {
+  group_id: string;
+  profile_id: string;
+  /** "admin" is the group's representative. */
+  role: GroupRole;
+  status: GroupMembershipStatus;
+  invited_by: string | null;
+  /** When they became an active member. */
+  joined_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 /**
@@ -149,24 +319,54 @@ type ProfileUpdate = Partial<
   >
 >;
 
-type ListingInsert = Pick<
-  ListingRow,
-  "owner_id" | "society" | "bhk_type" | "rent_per_person"
-> &
+/** The listing fields a student may write (009): never id, owner or times. */
+type ListingWritable = Omit<ListingRow, "id" | "owner_id" | "created_at" | "updated_at">;
+type ListingInsert = Pick<ListingRow, "owner_id" | "society" | "bhk_type" | "rent_per_person"> &
+  Partial<ListingWritable>;
+type ListingUpdate = Partial<ListingWritable>;
+
+/** Fields the database fills in itself. */
+type Generated = "created_at" | "updated_at";
+
+type HousingStatusInsert = Pick<HousingStatusRow, "profile_id" | "status">;
+type HousingStatusUpdate = Pick<HousingStatusRow, "status">;
+
+type DiscoveryPreferencesInsert = Pick<DiscoveryPreferencesRow, "profile_id"> &
+  Partial<Pick<DiscoveryPreferencesRow, "discover_housing" | "seeking">>;
+type DiscoveryPreferencesUpdate = Partial<Pick<DiscoveryPreferencesRow, "discover_housing" | "seeking">>;
+
+type ProfilePhotoInsert = Pick<ProfilePhotoRow, "profile_id" | "url" | "position">;
+type ProfilePhotoUpdate = Partial<Pick<ProfilePhotoRow, "url" | "position">>;
+
+type ProfileInterestInsert = Pick<ProfileInterestRow, "profile_id" | "interest">;
+
+type LifestylePreferencesInsert = Pick<LifestylePreferencesRow, "profile_id"> &
+  Partial<Omit<LifestylePreferencesRow, "profile_id" | Generated>>;
+type LifestylePreferencesUpdate = Partial<Omit<LifestylePreferencesRow, "profile_id" | Generated>>;
+
+type PracticalPreferencesInsert = Pick<PracticalPreferencesRow, "profile_id"> &
+  Partial<Omit<PracticalPreferencesRow, "profile_id" | Generated>>;
+type PracticalPreferencesUpdate = Partial<Omit<PracticalPreferencesRow, "profile_id" | Generated>>;
+
+/** created_by must be the signed-in student; they become the first admin. */
+type GroupInsert = Pick<GroupRow, "name" | "created_by"> &
   Partial<
     Pick<
-      ListingRow,
-      | "id"
-      | "vacant_spots"
-      | "maintenance_per_person"
-      | "deposit_per_person"
-      | "setup_cost"
-      | "amenities"
-      | "photos"
-      | "is_active"
+      GroupRow,
+      | "description"
+      | "avatar_url"
+      | "max_members"
+      | "preferred_gender"
+      | "requirements"
+      | "preferred_societies"
+      | "budget_max"
+      | "move_in_timeframe"
+      | "preferred_bhk_types"
+      | "is_discoverable"
     >
   >;
-type ListingUpdate = Partial<Omit<ListingRow, "id" | "owner_id" | "created_at">>;
+/** Admins only. */
+type GroupUpdate = Partial<Omit<GroupRow, "id" | "created_by" | Generated>>;
 
 type SwipeInsert = Pick<SwipeRow, "sender_id" | "receiver_id" | "action"> &
   Partial<
@@ -238,6 +438,63 @@ export type Database = {
           },
         ];
       };
+      housing_status: {
+        Row: HousingStatusRow;
+        Insert: HousingStatusInsert;
+        Update: HousingStatusUpdate;
+        Relationships: Relationship[];
+      };
+      discovery_preferences: {
+        Row: DiscoveryPreferencesRow;
+        Insert: DiscoveryPreferencesInsert;
+        Update: DiscoveryPreferencesUpdate;
+        Relationships: Relationship[];
+      };
+      profile_photos: {
+        Row: ProfilePhotoRow;
+        Insert: ProfilePhotoInsert;
+        Update: ProfilePhotoUpdate;
+        Relationships: Relationship[];
+      };
+      interests: {
+        Row: InterestRow;
+        /** Read-only catalogue. */
+        Insert: never;
+        Update: never;
+        Relationships: Relationship[];
+      };
+      profile_interests: {
+        Row: ProfileInterestRow;
+        Insert: ProfileInterestInsert;
+        /** Add or remove; never edit. */
+        Update: never;
+        Relationships: Relationship[];
+      };
+      lifestyle_preferences: {
+        Row: LifestylePreferencesRow;
+        Insert: LifestylePreferencesInsert;
+        Update: LifestylePreferencesUpdate;
+        Relationships: Relationship[];
+      };
+      practical_preferences: {
+        Row: PracticalPreferencesRow;
+        Insert: PracticalPreferencesInsert;
+        Update: PracticalPreferencesUpdate;
+        Relationships: Relationship[];
+      };
+      groups: {
+        Row: GroupRow;
+        Insert: GroupInsert;
+        Update: GroupUpdate;
+        Relationships: Relationship[];
+      };
+      group_members: {
+        Row: GroupMemberRow;
+        /** Only through the group functions below. */
+        Insert: never;
+        Update: never;
+        Relationships: Relationship[];
+      };
     };
     Views: {
       /** The newest message in each match you're part of (migration 004). */
@@ -248,6 +505,26 @@ export type Database = {
     };
     Functions: {
       is_srm_email: { Args: { address: string }; Returns: boolean };
+      // Checks used by policies, callable by signed-in students (009, 010).
+      has_accommodation: { Args: Record<string, never>; Returns: boolean };
+      is_verified_student: { Args: Record<string, never>; Returns: boolean };
+      is_group_member: { Args: { p_group: string }; Returns: boolean };
+      is_group_admin: { Args: { p_group: string }; Returns: boolean };
+      is_group_involved: { Args: { p_group: string }; Returns: boolean };
+      // Group membership changes (010). Each returns the new status or role.
+      request_to_join_group: { Args: { p_group: string }; Returns: GroupMembershipStatus };
+      review_join_request: {
+        Args: { p_group: string; p_profile: string; p_approve: boolean };
+        Returns: GroupMembershipStatus;
+      };
+      invite_to_group: { Args: { p_group: string; p_profile: string }; Returns: GroupMembershipStatus };
+      respond_to_group_invite: { Args: { p_group: string; p_accept: boolean }; Returns: GroupMembershipStatus };
+      leave_group: { Args: { p_group: string }; Returns: GroupMembershipStatus };
+      remove_group_member: { Args: { p_group: string; p_profile: string }; Returns: GroupMembershipStatus };
+      set_group_member_role: {
+        Args: { p_group: string; p_profile: string; p_role: GroupRole };
+        Returns: GroupRole;
+      };
     };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;

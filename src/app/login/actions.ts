@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { NOT_ELIGIBLE_MESSAGE, isSrmEmail } from "@/lib/eligibility";
 import { createClient } from "@/lib/supabase/server";
 
 /** What the login form shows after a submit that did not redirect. */
@@ -29,6 +30,11 @@ function friendly(message: string): string {
   }
   if (/rate limit/i.test(message)) {
     return "Too many attempts. Please wait a few minutes and try again.";
+  }
+  // The database refuses non-SRM sign-ups (migration 006); Supabase Auth
+  // reports that only as a generic database error.
+  if (/database error saving new user|only for SRM students/i.test(message)) {
+    return NOT_ELIGIBLE_MESSAGE;
   }
   return message;
 }
@@ -59,6 +65,10 @@ export async function authenticate(
   const supabase = await createClient();
 
   if (intent === "signup") {
+    // Checked here for a clear message; the database enforces it anyway.
+    if (!isSrmEmail(email)) {
+      return { error: NOT_ELIGIBLE_MESSAGE };
+    }
     const origin = (await headers()).get("origin") ?? "http://localhost:3000";
     const fullName = field(formData, "full_name").slice(0, 80);
     const { data, error } = await supabase.auth.signUp({
