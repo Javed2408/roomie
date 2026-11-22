@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500">
+  <rect width="400" height="340" fill="#f7c59f"/>
+  <rect y="340" width="400" height="160" fill="#d9c3a8"/>
+  <g stroke="#000" stroke-opacity="0.07" stroke-width="2"><path d="M0 380 H400 M0 425 H400 M0 470 H400"/><path d="M90 340 V380 M250 380 V425 M140 425 V470 M320 470 V500"/></g>
+  <rect y="334" width="400" height="10" fill="#000" opacity="0.06"/>
+  <defs><linearGradient id="dusk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7c59f"/><stop offset="1" stop-color="#fde7d4"/></linearGradient></defs>
+  <rect width="400" height="340" fill="url(#dusk)"/>
+  <circle cx="290" cy="120" r="40" fill="#ffd27a"/>
+  <g fill="#b7a8c4"><rect x="20" y="170" width="60" height="170"/><rect x="92" y="130" width="48" height="210"/><rect x="250" y="190" width="70" height="150"/><rect x="330" y="150" width="50" height="190"/></g>
+  <g fill="#faf9f6" opacity="0.6"><rect x="32" y="186" width="10" height="12"/><rect x="56" y="186" width="10" height="12"/><rect x="104" y="150" width="10" height="12"/><rect x="122" y="176" width="10" height="12"/><rect x="264" y="206" width="10" height="12"/><rect x="292" y="232" width="10" height="12"/><rect x="342" y="170" width="10" height="12"/></g
+  ><rect y="250" width="400" height="12" fill="#5f5a53"/>
+  <g stroke="#5f5a53" stroke-width="6"><path d="M20 262 V340 M60 262 V340 M100 262 V340 M140 262 V340 M180 262 V340 M220 262 V340 M260 262 V340 M300 262 V340 M340 262 V340 M380 262 V340"/></g>
+  <rect x="100" y="356" width="110" height="18" rx="9" fill="#d4a537"/>
+  <rect x="108" y="374" width="8" height="52" fill="#8a6a4f"/><rect x="194" y="374" width="8" height="52" fill="#8a6a4f"/>
+  <rect x="96" y="300" width="18" height="76" rx="8" fill="#d4a537"/>
+  <circle cx="268" cy="368" r="22" fill="#faf9f6"/><rect x="262" y="388" width="12" height="40" fill="#faf9f6"/>
+  <rect x="258" y="350" width="20" height="14" rx="4" fill="#e85d04"/>
+  <g><path d="M56 440 q-30 -40 -6 -86 q16 30 6 86 Z" fill="#4f8f62"/>
+  <path d="M56 440 q30 -46 10 -100 q-22 40 -10 100 Z" fill="#4f8f62" opacity="0.85"/>
+  <path d="M56 440 q-44 -18 -50 -60 q34 10 50 60 Z" fill="#4f8f62" opacity="0.9"/>
+  <path d="M30 440 h52 l-6 52 h-40 Z" fill="#c9744a"/></g><g><path d="M350 448 q-30 -40 -6 -86 q16 30 6 86 Z" fill="#4f8f62"/>
+  <path d="M350 448 q30 -46 10 -100 q-22 40 -10 100 Z" fill="#4f8f62" opacity="0.85"/>
+  <path d="M350 448 q-44 -18 -50 -60 q34 10 50 60 Z" fill="#4f8f62" opacity="0.9"/>
+  <path d="M324 448 h52 l-6 52 h-40 Z" fill="#7b4b94"/></g>
+  <g><rect x="16" y="16" width="86" height="30" rx="15" fill="#1a1a1a" opacity="0.72"/>
+  <text x="59" y="36" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#faf9f6">Sample</text></g>
+</svg>

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500">
+  <rect width="400" height="340" fill="#e3efe8"/>
+  <rect y="340" width="400" height="160" fill="#d2b48c"/>
+  <g stroke="#000" stroke-opacity="0.07" stroke-width="2"><path d="M0 380 H400 M0 425 H400 M0 470 H400"/><path d="M90 340 V380 M250 380 V425 M140 425 V470 M320 470 V500"/></g>
+  <rect y="334" width="400" height="10" fill="#000" opacity="0.06"/>
+  <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe0f5"/><stop offset="1" stop-color="#eaf5fb"/></linearGradient></defs>
+  <rect x="232" y="64" width="130" height="150" rx="6" fill="url(#sky)" stroke="#ffffff" stroke-width="10"/>
+  <circle cx="323.0" cy="109.0" r="14" fill="#ffd27a"/>
+  <path d="M232 181.0 q32.5 -27.0 65.0 0 t65.0 0 V214 H232 Z" fill="#9cc9a6"/>
+  <path d="M297.0 64 V214 M232 139.0 H362" stroke="#ffffff" stroke-width="6"/>
+  <rect x="58" y="92" width="112" height="82" rx="6" fill="#ffffff"/>
+  <rect x="66" y="100" width="96" height="66" fill="#2a9d8f" opacity="0.25"/>
+  <path d="M66 166 l30 -36 l22 22 l16 -14 l28 28 Z" fill="#2a9d8f" opacity="0.7"/>
+  <rect x="28" y="236" width="236" height="84" rx="16" fill="#5f4634"/>
+  <rect x="28" y="300" width="262" height="74" rx="16" fill="#ffffff"/>
+  <rect x="104" y="306" width="186" height="78" rx="16" fill="#2a9d8f"/>
+  <path d="M104 330 H290" stroke="#ffffff" stroke-opacity="0.35" stroke-width="6"/>
+  <rect x="42" y="282" width="74" height="34" rx="14" fill="#f3efe8"/>
+  <rect x="40" y="384" width="12" height="22" rx="4" fill="#5f4634"/>
+  <rect x="270" y="384" width="12" height="22" rx="4" fill="#5f4634"/>
+  <g><path d="M350 430 q-30 -40 -6 -86 q16 30 6 86 Z" fill="#4f8f62"/>
+  <path d="M350 430 q30 -46 10 -100 q-22 40 -10 100 Z" fill="#4f8f62" opacity="0.85"/>
+  <path d="M350 430 q-44 -18 -50 -60 q34 10 50 60 Z" fill="#4f8f62" opacity="0.9"/>
+  <path d="M324 430 h52 l-6 52 h-40 Z" fill="#c9744a"/></g>
+  <g><rect x="16" y="16" width="86" height="30" rx="15" fill="#1a1a1a" opacity="0.72"/>
+  <text x="59" y="36" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#faf9f6">Sample</text></g>
+</svg>

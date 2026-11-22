@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f7eedc"/><stop offset="1" stop-color="#eadbb8"/></linearGradient></defs>
+  <rect width="400" height="500" fill="url(#bg)"/>
+  <circle cx="200" cy="220" r="150" fill="#ffffff" opacity="0.35"/>
+  
+  <path d="M52 500 C52 396 118 350 200 350 C282 350 348 396 348 500 Z" fill="#d4a537"/>
+  <path d="M168 352 L200 400 L232 352 Z" fill="rgba(0,0,0,0.12)"/>
+  <rect x="172" y="292" width="56" height="72" rx="22" fill="#a86e4a"/>
+  <rect x="172" y="300" width="56" height="30" fill="rgba(0,0,0,0.12)"/>
+  <ellipse cx="200" cy="232" rx="72" ry="82" fill="#a86e4a"/>
+  <ellipse cx="128" cy="240" rx="10" ry="16" fill="#a86e4a"/>
+  <ellipse cx="272" cy="240" rx="10" ry="16" fill="#a86e4a"/>
+  <path d="M126 236 C116 162 156 130 204 130 C254 130 286 164 274 236 C266 204 246 186 208 184 C176 184 150 196 140 214 C134 222 130 230 126 236 Z" fill="#211a16"/>
+  <circle cx="174" cy="240" r="6" fill="#1a1a1a"/>
+  <circle cx="226" cy="240" r="6" fill="#1a1a1a"/>
+  <circle cx="160" cy="262" r="10" fill="#e85d04" opacity="0.12"/>
+  <circle cx="240" cy="262" r="10" fill="#e85d04" opacity="0.12"/>
+  <path d="M182 274 Q200 290 218 274" fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round"/>
+  <g fill="none" stroke="#1a1a1a" stroke-width="4"><circle cx="174" cy="240" r="17"/><circle cx="226" cy="240" r="17"/><path d="M191 240 H209"/></g>
+</svg>

@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+/*
+ * Roomie design tokens. Every colour used in the app is named here once,
+ * then used through Tailwind classes such as `bg-cream` or `text-charcoal`.
+ */
+@theme {
+  /* Surfaces */
+  --color-cream: #faf9f6; /* app background */
+  --color-canvas: #ece8e1; /* desktop area outside the phone-width app */
+  --color-surface: #ffffff; /* cards */
+  --color-line: #e7e2da; /* borders and dividers */
+
+  /* Text */
+  --color-charcoal: #1a1a1a; /* main text and primary buttons */
+  --color-muted: #5f5a53; /* secondary text (6.4:1 on cream) */
+
+  /* Accents */
+  --color-accent: #e85d04; /* warm orange: highlights, icons, likes */
+  --color-accent-strong: #b84a03; /* orange for small text (4.9:1 on cream) */
+  --color-accent-soft: #fdebdd;
+  --color-forest: #2d6a4f; /* deep green: trust, verified, success */
+  --color-forest-soft: #e3efe8;
+
+  /* Type */
+  --font-sans: var(--font-geist-sans);
+  --font-display: var(--font-fraunces);
+
+  /* Shape */
+  --radius-card: 1.5rem;
+
+  /* Motion (use with `motion-safe:` so reduced-motion users get none) */
+  --animate-sheet-up: sheet-up 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  @keyframes sheet-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+}
+
+html {
+  background: var(--color-canvas);
+}
+
+body {
+  color: var(--color-charcoal);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}

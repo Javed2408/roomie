@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500">
+  <rect width="400" height="340" fill="#e6eef7"/>
+  <rect y="340" width="400" height="160" fill="#b98b62"/>
+  <g stroke="#000" stroke-opacity="0.07" stroke-width="2"><path d="M0 380 H400 M0 425 H400 M0 470 H400"/><path d="M90 340 V380 M250 380 V425 M140 425 V470 M320 470 V500"/></g>
+  <rect y="334" width="400" height="10" fill="#000" opacity="0.06"/>
+  <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe0f5"/><stop offset="1" stop-color="#eaf5fb"/></linearGradient></defs>
+  <rect x="40" y="60" width="140" height="150" rx="6" fill="url(#sky)" stroke="#ffffff" stroke-width="10"/>
+  <circle cx="138.0" cy="105.0" r="14" fill="#ffd27a"/>
+  <path d="M40 177.0 q35.0 -27.0 70.0 0 t70.0 0 V210 H40 Z" fill="#9cc9a6"/>
+  <path d="M110.0 60 V210 M40 135.0 H180" stroke="#ffffff" stroke-width="6"/>
+  <rect x="236" y="78" width="130" height="10" rx="4" fill="#8a6a4f"/>
+  <rect x="246" y="48" width="14" height="30" fill="#e85d04"/><rect x="262" y="54" width="12" height="24" fill="#2d6a4f"/><rect x="276" y="44" width="16" height="34" fill="#3d5a80"/>
+  <rect x="236" y="150" width="130" height="10" rx="4" fill="#8a6a4f"/>
+  <circle cx="330" cy="130" r="18" fill="#4f8f62"/><rect x="320" y="134" width="20" height="16" fill="#c9744a"/>
+  <ellipse cx="200" cy="452" rx="170" ry="30" fill="#c6d6ea"/>
+  <rect x="48" y="246" width="304" height="80" rx="26" fill="#e85d04"/>
+  <rect x="40" y="300" width="320" height="76" rx="22" fill="#e85d04"/>
+  <rect x="40" y="300" width="320" height="76" rx="22" fill="#000" opacity="0.08"/>
+  <rect x="26" y="280" width="46" height="104" rx="20" fill="#e85d04"/>
+  <rect x="328" y="280" width="46" height="104" rx="20" fill="#e85d04"/>
+  <rect x="88" y="270" width="72" height="46" rx="16" fill="#faf9f6"/>
+  <rect x="240" y="270" width="72" height="46" rx="16" fill="#e9c46a"/>
+  <rect x="44" y="376" width="10" height="20" rx="3" fill="#5f4634"/><rect x="346" y="376" width="10" height="20" rx="3" fill="#5f4634"/>
+  <rect x="140" y="412" width="120" height="16" rx="6" fill="#8a6a4f"/>
+  <rect x="152" y="428" width="8" height="28" fill="#8a6a4f"/><rect x="240" y="428" width="8" height="28" fill="#8a6a4f"/>
+  <path d="M200 0 V40" stroke="#1a1a1a" stroke-width="3"/><path d="M178 60 a22 22 0 0 1 44 0 Z" fill="#1a1a1a"/>
+  <g><rect x="16" y="16" width="86" height="30" rx="15" fill="#1a1a1a" opacity="0.72"/>
+  <text x="59" y="36" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#faf9f6">Sample</text></g>
+</svg>
