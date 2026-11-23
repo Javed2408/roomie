@@ -50,6 +50,7 @@ const SAMPLE: Candidate = {
         answer: "Out of the door by 7:40 with filter coffee, sharing an auto to the Arch gate.",
       },
     ],
+    about: "Third-year CSE, happiest with filter coffee and a quiet desk. Looking for one easy-going flatmate.",
     preferred_societies: [],
     max_budget: null,
     move_in_timeframe: null,

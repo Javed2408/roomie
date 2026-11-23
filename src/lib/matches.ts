@@ -44,7 +44,19 @@ export const getPendingLikes = cache(async function getPendingLikes(
     supabase.from("swipes").select("receiver_id").eq("sender_id", userId),
   ]);
   const decided = new Set((answered ?? []).map((row) => row.receiver_id));
-  return (received ?? []).filter((like) => !decided.has(like.sender_id));
+  const waiting = (received ?? []).filter((like) => !decided.has(like.sender_id));
+  if (waiting.length === 0) {
+    return [];
+  }
+  // Likes from accounts that can't use Roomie (not SRM-verified) stay in
+  // the database but aren't shown or counted.
+  const { data: senders } = await supabase
+    .from("profiles")
+    .select("id")
+    .in("id", [...new Set(waiting.map((like) => like.sender_id))])
+    .eq("is_srm_verified", true);
+  const verified = new Set((senders ?? []).map((sender) => sender.id));
+  return waiting.filter((like) => verified.has(like.sender_id));
 });
 
 /** People's profiles with their flat (only flat owners' live flats show). */

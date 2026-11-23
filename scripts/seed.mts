@@ -48,7 +48,7 @@ type Flat = Pick<
 > &
   Partial<Pick<ListingRow, "description" | "current_flatmates">>;
 
-type Lifestyle = Omit<LifestylePreferencesRow, "profile_id" | "created_at" | "updated_at">;
+type Lifestyle = Partial<Omit<LifestylePreferencesRow, "profile_id" | "created_at" | "updated_at">>;
 
 type SampleStudent = {
   /** Becomes the email: <handle>@seed.roomie.test */

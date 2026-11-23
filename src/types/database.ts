@@ -1,6 +1,6 @@
 /**
  * TypeScript shapes of the database, matching
- * `supabase/migrations/` (001 to 010) exactly. Keep the two in sync: every
+ * `supabase/migrations/` (001 to 012) exactly. Keep the two in sync: every
  * change to the SQL needs the same change here.
  *
  * `Database` is in the format supabase-js expects, so queries are checked:
@@ -102,6 +102,8 @@ export type ProfileRow = {
   /** The main photo; mirrors profile_photos position 0 (008). */
   avatar_url: string | null;
   bio_prompts: BioPrompt[];
+  /** A short personal introduction, up to 300 characters (012). */
+  about: string | null;
   /** Legacy mirrors of practical_preferences (008); first added in 002. */
   preferred_societies: Society[];
   /** Whole rupees per month, per person. Mirrors practical_preferences.budget_max. */
@@ -232,11 +234,19 @@ export type LifestylePreferencesRow = {
   smoking: SmokingHabit | null;
   food_habits: FoodHabit | null;
   personality: Personality | null;
+  /** Wants a shared cleaning rota (012). */
+  cleaning_rota: boolean | null;
+  /** Wants a heads-up before guests visit (012). */
+  guest_notice: boolean | null;
   created_at: string;
   updated_at: string;
 }
 
-/** Budget, place and requirements. Every profile has one row. */
+/**
+ * Budget, place and requirements. Every profile has one row, readable only
+ * by its owner (011). Societies, max budget and move-in are mirrored onto
+ * the profile, which is what others see.
+ */
 export type PracticalPreferencesRow = {
   profile_id: string;
   /** Whole rupees per month, per person. */
@@ -295,7 +305,7 @@ export type GroupMemberRow = {
  * profiles (it would include the email column).
  */
 export const PUBLIC_PROFILE_COLUMNS =
-  "id, full_name, gender, year_of_study, department, mode, is_srm_verified, avatar_url, bio_prompts, preferred_societies, max_budget, move_in_timeframe, is_sample, created_at, updated_at";
+  "id, full_name, gender, year_of_study, department, mode, is_srm_verified, avatar_url, bio_prompts, about, preferred_societies, max_budget, move_in_timeframe, is_sample, created_at, updated_at";
 export type PublicProfile = Omit<ProfileRow, "email">;
 
 // --- What each role may write (mirrors the GRANTs in the migration) -------------
@@ -313,6 +323,7 @@ type ProfileUpdate = Partial<
     | "mode"
     | "avatar_url"
     | "bio_prompts"
+    | "about"
     | "preferred_societies"
     | "max_budget"
     | "move_in_timeframe"
@@ -334,11 +345,6 @@ type HousingStatusUpdate = Pick<HousingStatusRow, "status">;
 type DiscoveryPreferencesInsert = Pick<DiscoveryPreferencesRow, "profile_id"> &
   Partial<Pick<DiscoveryPreferencesRow, "discover_housing" | "seeking">>;
 type DiscoveryPreferencesUpdate = Partial<Pick<DiscoveryPreferencesRow, "discover_housing" | "seeking">>;
-
-type ProfilePhotoInsert = Pick<ProfilePhotoRow, "profile_id" | "url" | "position">;
-type ProfilePhotoUpdate = Partial<Pick<ProfilePhotoRow, "url" | "position">>;
-
-type ProfileInterestInsert = Pick<ProfileInterestRow, "profile_id" | "interest">;
 
 type LifestylePreferencesInsert = Pick<LifestylePreferencesRow, "profile_id"> &
   Partial<Omit<LifestylePreferencesRow, "profile_id" | Generated>>;
@@ -452,8 +458,9 @@ export type Database = {
       };
       profile_photos: {
         Row: ProfilePhotoRow;
-        Insert: ProfilePhotoInsert;
-        Update: ProfilePhotoUpdate;
+        /** Only through set_profile_photos() (012). */
+        Insert: never;
+        Update: never;
         Relationships: Relationship[];
       };
       interests: {
@@ -465,8 +472,8 @@ export type Database = {
       };
       profile_interests: {
         Row: ProfileInterestRow;
-        Insert: ProfileInterestInsert;
-        /** Add or remove; never edit. */
+        /** Only through set_profile_interests() (012). */
+        Insert: never;
         Update: never;
         Relationships: Relationship[];
       };
@@ -505,6 +512,21 @@ export type Database = {
     };
     Functions: {
       is_srm_email: { Args: { address: string }; Returns: boolean };
+      /** The signed-in account is a confirmed @srmist.edu.in address (011). */
+      is_eligible_student: { Args: Record<string, never>; Returns: boolean };
+      // Profile editor saves (012), each all-or-nothing.
+      /** The whole ordered photo set; index 0 is the main photo. */
+      set_profile_photos: { Args: { p_urls: string[] }; Returns: number };
+      set_profile_interests: { Args: { p_interests: string[] }; Returns: number };
+      update_housing_and_discovery: {
+        Args: {
+          p_status: HousingStatus;
+          p_discover: DiscoverHousing;
+          p_seeking: Seeking;
+          p_hide_listings?: boolean;
+        };
+        Returns: undefined;
+      };
       // Checks used by policies, callable by signed-in students (009, 010).
       has_accommodation: { Args: Record<string, never>; Returns: boolean };
       is_verified_student: { Args: Record<string, never>; Returns: boolean };

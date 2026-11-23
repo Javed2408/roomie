@@ -122,13 +122,19 @@ export function TextAreaField({
   );
 }
 
-/** Tappable chips: pick one (`multiple={false}`) or several. */
+/**
+ * Tappable chips: pick one (`multiple={false}`) or several. With
+ * `clearable`, tapping the chosen chip again un-picks it (for optional
+ * questions). `disabled` options can't be newly picked.
+ */
 export function ChipGroup<T extends string>({
   label,
   options,
   value,
   onChange,
   multiple = true,
+  clearable = false,
+  isDisabled,
   error,
   hint,
 }: {
@@ -137,6 +143,8 @@ export function ChipGroup<T extends string>({
   value: T[];
   onChange: (value: T[]) => void;
   multiple?: boolean;
+  clearable?: boolean;
+  isDisabled?: (option: T) => boolean;
   error?: string;
   hint?: ReactNode;
 }) {
@@ -147,21 +155,25 @@ export function ChipGroup<T extends string>({
       <div className="flex flex-wrap gap-2">
         {options.map((option) => {
           const isOn = value.includes(option.value);
+          const disabled = !isOn && Boolean(isDisabled?.(option.value));
           return (
             <button
               key={option.value}
               type="button"
               aria-pressed={isOn}
+              disabled={disabled}
               onClick={() =>
                 onChange(
                   multiple
                     ? isOn
                       ? value.filter((item) => item !== option.value)
                       : [...value, option.value]
-                    : [option.value],
+                    : isOn && clearable
+                      ? []
+                      : [option.value],
                 )
               }
-              className={`focus-visible:outline-accent inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${
+              className={`focus-visible:outline-accent inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-40 ${
                 isOn
                   ? "bg-charcoal text-cream border-charcoal"
                   : "bg-surface border-line text-charcoal hover:border-charcoal/40"

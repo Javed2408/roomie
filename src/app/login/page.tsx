@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { AuthForm } from "@/components/auth/auth-form";
 import { AppShell } from "@/components/ui/app-shell";
 import { Wordmark } from "@/components/ui/wordmark";
+import { isEligibleUser } from "@/lib/eligibility";
 import { getCurrentUser, isOnboarded } from "@/lib/profile";
 
 export const metadata: Metadata = { title: "Sign in · Roomie" };
@@ -21,7 +22,13 @@ async function LoginContent({
   // Already signed in: finish onboarding first, otherwise go to the account.
   const current = await getCurrentUser();
   if (current) {
-    redirect(isOnboarded(current.profile) ? "/discover" : "/onboarding");
+    redirect(
+      !isEligibleUser(current.user)
+        ? "/restricted"
+        : isOnboarded(current.profile)
+          ? "/discover"
+          : "/onboarding",
+    );
   }
   const { error } = await searchParams;
   return <AuthForm linkError={error === "confirm"} />;

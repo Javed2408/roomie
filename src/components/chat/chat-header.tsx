@@ -7,7 +7,7 @@ import { useState } from "react";
 import { FeedCard } from "@/components/feed/feed-card";
 import { Avatar } from "@/components/ui/avatar";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { SafetyTip } from "@/components/ui/safety-tip";
 import { SrmMark } from "@/components/ui/srm-badge";
 import { lookingFor } from "@/lib/likes";
@@ -63,6 +63,9 @@ export function ChatHeader({ them }: { them: Candidate }) {
         >
           <SafetyTip className="mb-5" />
           <FeedCard candidate={them} />
+          <ButtonLink href={`/students/${them.profile.id}`} variant="secondary" fullWidth className="mt-5">
+            See full profile
+          </ButtonLink>
         </BottomSheet>
       )}
     </div>

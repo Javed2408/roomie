@@ -1,6 +1,8 @@
 import type { User } from "@supabase/supabase-js";
+import { redirect } from "next/navigation";
 import { cache } from "react";
 
+import { NOT_ELIGIBLE_MESSAGE, isEligibleUser } from "@/lib/eligibility";
 import { createClient } from "@/lib/supabase/server";
 import {
   PUBLIC_PROFILE_COLUMNS,
@@ -72,3 +74,50 @@ export const getCurrentUser = cache(async function getCurrentUser(): Promise<Cur
   }
   return { user, profile: profileResult.data, listing: listingResult.data };
 });
+
+/** A signed-in, eligible student (see requireStudent). */
+export type Student = CurrentUser & { profile: PublicProfile };
+
+/**
+ * The gate for every student-only page. Sends people elsewhere when:
+ * - nobody is signed in (to /login);
+ * - the account isn't a confirmed @srmist.edu.in address (to /restricted).
+ *   This checks the login itself, never the profile badge, and the
+ *   database enforces the same rule (migration 011);
+ * - `onboarded` is asked for and the profile isn't finished (to /onboarding).
+ */
+export async function requireStudent(options: { onboarded: false }): Promise<CurrentUser>;
+export async function requireStudent(options?: { onboarded?: true }): Promise<Student>;
+export async function requireStudent({ onboarded = true }: { onboarded?: boolean } = {}) {
+  const current = await getCurrentUser();
+  if (!current) {
+    redirect("/login");
+  }
+  if (!isEligibleUser(current.user)) {
+    redirect("/restricted");
+  }
+  if (onboarded && (!current.profile || !isOnboarded(current.profile))) {
+    redirect("/onboarding");
+  }
+  return current;
+}
+
+/**
+ * For server actions: the signed-in, eligible user, or a message saying
+ * why they can't do this. (Actions return errors rather than redirecting.)
+ */
+export async function getActionUser(): Promise<
+  { ok: true; user: User } | { ok: false; error: string }
+> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, error: "Your session has ended. Please sign in again." };
+  }
+  if (!isEligibleUser(user)) {
+    return { ok: false, error: NOT_ELIGIBLE_MESSAGE };
+  }
+  return { ok: true, user };
+}

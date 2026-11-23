@@ -7,7 +7,7 @@ import { Suspense } from "react";
 import { ChatRoom } from "@/components/chat/chat-room";
 import { AppShell } from "@/components/ui/app-shell";
 import { loadChat } from "@/lib/matches";
-import { getCurrentUser, isOnboarded } from "@/lib/profile";
+import { requireStudent } from "@/lib/profile";
 import { currentDays } from "@/lib/time";
 
 export const metadata: Metadata = { title: "Chat · Roomie" };
@@ -17,13 +17,8 @@ export const metadata: Metadata = { title: "Chat · Roomie" };
  * broken link) goes back to their matches.
  */
 async function Chat({ params }: { params: PageProps<"/matches/[matchId]">["params"] }) {
-  const current = await getCurrentUser();
-  if (!current) {
-    redirect("/login");
-  }
-  if (!current.profile || !isOnboarded(current.profile)) {
-    redirect("/onboarding");
-  }
+  // Signed in, a confirmed SRM student, and onboarded.
+  const current = await requireStudent();
   const { matchId } = await params;
   const chat = await loadChat(matchId, {
     id: current.user.id,

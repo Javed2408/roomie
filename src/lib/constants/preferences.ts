@@ -1,7 +1,7 @@
 /**
  * Allowed values for housing status, discovery, compatibility and groups,
  * with the words the app shows for each. Every list mirrors a CHECK
- * constraint in `supabase/migrations/` (007, 008, 009, 010) exactly: change
+ * constraint in `supabase/migrations/` (007 to 012) exactly: change
  * both together.
  */
 
@@ -29,48 +29,49 @@ export const SEEKING_OPTIONS = [
 ] as const;
 export type Seeking = (typeof SEEKING_OPTIONS)[number]["value"];
 
-// --- Lifestyle and personality (008) ---------------------------------------
+// --- Lifestyle and personality (008, 012) ----------------------------------
 
 export const SLEEP_SCHEDULES = [
   { value: "early_bird", label: "Early bird" },
   { value: "night_owl", label: "Night owl" },
-  { value: "flexible", label: "Flexible" },
+  { value: "flexible", label: "Flexible, depends on the day" },
 ] as const;
 export type SleepSchedule = (typeof SLEEP_SCHEDULES)[number]["value"];
 
 export const CLEANLINESS_LEVELS = [
-  { value: "very_tidy", label: "Very tidy" },
-  { value: "tidy", label: "Tidy" },
+  { value: "very_tidy", label: "Very organised" },
+  { value: "tidy", label: "Generally tidy" },
   { value: "relaxed", label: "Relaxed" },
 ] as const;
 export type Cleanliness = (typeof CLEANLINESS_LEVELS)[number]["value"];
 
 export const SOCIAL_LIVES = [
-  { value: "homebody", label: "Homebody" },
-  { value: "balanced", label: "Balanced" },
-  { value: "outgoing", label: "Outgoing" },
+  { value: "homebody", label: "Mostly a homebody" },
+  { value: "balanced", label: "Balanced, depends on the company" },
+  { value: "outgoing", label: "Very social" },
 ] as const;
 export type SocialLife = (typeof SOCIAL_LIVES)[number]["value"];
 
 export const STUDY_HABITS = [
-  { value: "quiet_at_home", label: "Quiet, at home" },
-  { value: "home_with_music", label: "At home, with music" },
-  { value: "library", label: "In the library" },
-  { value: "varies", label: "It varies" },
+  { value: "quiet_at_home", label: "Quiet study" },
+  { value: "home_with_music", label: "With music on" },
+  { value: "library", label: "Library or campus" },
+  { value: "in_groups", label: "In groups" },
+  { value: "varies", label: "Flexible" },
 ] as const;
 export type StudyHabits = (typeof STUDY_HABITS)[number]["value"];
 
 export const GUEST_FREQUENCIES = [
-  { value: "rarely", label: "Rarely" },
-  { value: "sometimes", label: "Sometimes" },
-  { value: "often", label: "Often" },
+  { value: "rarely", label: "Rarely have guests" },
+  { value: "sometimes", label: "Friends over now and then" },
+  { value: "often", label: "Often host at home" },
 ] as const;
 export type GuestFrequency = (typeof GUEST_FREQUENCIES)[number]["value"];
 
 export const NOISE_TOLERANCES = [
-  { value: "low", label: "I need quiet" },
-  { value: "medium", label: "Some noise is fine" },
-  { value: "high", label: "Noise doesn't bother me" },
+  { value: "low", label: "Prefer it quiet" },
+  { value: "medium", label: "Moderate noise is fine" },
+  { value: "high", label: "Happy in a lively home" },
 ] as const;
 export type NoiseTolerance = (typeof NOISE_TOLERANCES)[number]["value"];
 
@@ -95,6 +96,27 @@ export const PERSONALITIES = [
   { value: "extrovert", label: "Extrovert" },
 ] as const;
 export type Personality = (typeof PERSONALITIES)[number]["value"];
+
+/** The lifestyle questions with one answer each, in the order shown. */
+export const LIFESTYLE_QUESTIONS = [
+  { key: "sleep_schedule", question: "Sleep schedule", options: SLEEP_SCHEDULES },
+  { key: "study_habits", question: "How you study", options: STUDY_HABITS },
+  { key: "noise_tolerance", question: "Noise at home", options: NOISE_TOLERANCES },
+  { key: "cleanliness", question: "Cleanliness", options: CLEANLINESS_LEVELS },
+  { key: "guests", question: "Guests and visitors", options: GUEST_FREQUENCIES },
+  { key: "social_life", question: "Social life", options: SOCIAL_LIVES },
+  { key: "personality", question: "Personality", options: PERSONALITIES },
+  { key: "smoking", question: "Smoking", options: SMOKING_HABITS },
+  { key: "food_habits", question: "Food habits", options: FOOD_HABITS },
+] as const;
+export type LifestyleQuestionKey = (typeof LIFESTYLE_QUESTIONS)[number]["key"];
+
+/** Yes/no house wishes (012). */
+export const LIFESTYLE_WISHES = [
+  { key: "cleaning_rota", label: "I'd like a shared cleaning rota" },
+  { key: "guest_notice", label: "I'd like a heads-up before guests visit" },
+] as const;
+export type LifestyleWishKey = (typeof LIFESTYLE_WISHES)[number]["key"];
 
 // --- Practical requirements (008, 009, 010) --------------------------------
 

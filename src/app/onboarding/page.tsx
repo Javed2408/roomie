@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import {
@@ -9,7 +8,7 @@ import {
 import { AppShell } from "@/components/ui/app-shell";
 import { Wordmark } from "@/components/ui/wordmark";
 import { PROMPT_COUNT } from "@/lib/constants/prompts";
-import { getCurrentUser, isOnboarded, type CurrentUser } from "@/lib/profile";
+import { isOnboarded, requireStudent, type CurrentUser } from "@/lib/profile";
 
 export const metadata: Metadata = { title: "Set up your profile · Roomie" };
 
@@ -60,10 +59,8 @@ async function Onboarding({
 }: {
   searchParams: PageProps<"/onboarding">["searchParams"];
 }) {
-  const current = await getCurrentUser();
-  if (!current) {
-    redirect("/login");
-  }
+  // Signed in and a confirmed SRM student (onboarding not needed yet).
+  const current = await requireStudent({ onboarded: false });
   const isEditing = isOnboarded(current.profile);
   const { step } = await searchParams;
   const initialStep =

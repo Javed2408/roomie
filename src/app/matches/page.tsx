@@ -1,6 +1,5 @@
 import { HeartHandshake } from "lucide-react";
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { ConversationList } from "@/components/matches/conversation-list";
@@ -11,19 +10,14 @@ import { BottomNav } from "@/components/ui/bottom-nav";
 import { ButtonLink } from "@/components/ui/button";
 import { Wordmark } from "@/components/ui/wordmark";
 import { loadConversations, loadLikesYou } from "@/lib/matches";
-import { getCurrentUser, isOnboarded } from "@/lib/profile";
+import { requireStudent } from "@/lib/profile";
 
 export const metadata: Metadata = { title: "Matches · Roomie" };
 
 /** Likes waiting for an answer, then every conversation. */
 async function MatchesContent() {
-  const current = await getCurrentUser();
-  if (!current) {
-    redirect("/login");
-  }
-  if (!current.profile || !isOnboarded(current.profile)) {
-    redirect("/onboarding");
-  }
+  // Signed in, a confirmed SRM student, and onboarded.
+  const current = await requireStudent();
   const me = { id: current.user.id, profile: current.profile, listing: current.listing };
   const [likes, conversations] = await Promise.all([
     loadLikesYou(me),

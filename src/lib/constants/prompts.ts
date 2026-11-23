@@ -4,24 +4,57 @@
  * CHECK constraints in `supabase/migrations/` exactly.
  */
 
-/** Hinge-style prompts, written for flat hunting around SRM KTR. */
-export const PROMPTS = [
-  "My biggest flatmate dealbreaker is...",
-  "Ideal weekend vibe in Potheri / KTR...",
-  "My sleep & study schedule during end-sems...",
-  "Our flat's current vibe & house rules...",
-  "You'll catch me ordering from...",
-  "Non-negotiable shared expense rule...",
-  "Guest / friends hanging out policy...",
-  "My cleaning style, honestly...",
-  "Before an 8 AM class, I'm...",
-  "When the power goes out, I...",
-  "Late-night food run? I'm heading to...",
-  "The best flatmate I could ask for...",
+/**
+ * Hinge-style prompts, grouped for the prompt picker. Not everything is
+ * about housing: the best profiles show the person first.
+ * Never remove a prompt: students may already have answered it.
+ */
+export const PROMPT_BANK = [
+  {
+    category: "About me",
+    prompts: [
+      "Three things that describe me...",
+      "Something I can talk about for hours...",
+      "A random fact about me...",
+      "My social battery usually...",
+      "I am most productive when...",
+      "The kind of people I get along with...",
+    ],
+  },
+  {
+    category: "Living together",
+    prompts: [
+      "My idea of a perfect living environment...",
+      "One thing my future flatmate should know about me...",
+      "My biggest flatmate dealbreaker is...",
+      "My cleaning style, honestly...",
+      "Non-negotiable shared expense rule...",
+      "Guest / friends hanging out policy...",
+      "Our flat's current vibe & house rules...",
+      "The best flatmate I could ask for...",
+    ],
+  },
+  {
+    category: "Campus life",
+    prompts: [
+      "My ideal weekend looks like...",
+      "Ideal weekend vibe in Potheri / KTR...",
+      "My sleep & study schedule during end-sems...",
+      "Before an 8 AM class, I'm...",
+      "You'll catch me ordering from...",
+      "Late-night food run? I'm heading to...",
+      "When the power goes out, I...",
+    ],
+  },
 ] as const;
 
-/** How many prompts a profile shows, and the longest answer allowed. */
+/** Every prompt in the bank. */
+export const PROMPTS = PROMPT_BANK.flatMap((group) => group.prompts);
+export type Prompt = (typeof PROMPTS)[number];
+
+/** Onboarding asks for this many; the profile editor allows 0 to this many. */
 export const PROMPT_COUNT = 3;
+/** The longest prompt answer (the database allows up to 300). */
 export const PROMPT_ANSWER_MAX = 150;
 
 export const SOCIETIES = [

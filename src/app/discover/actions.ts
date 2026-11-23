@@ -1,6 +1,7 @@
 "use server";
 
 import { LIKE_COMMENT_MAX } from "@/lib/constants/prompts";
+import { getActionUser } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import type { LikedTargetType, SwipeAction } from "@/types/database";
 
@@ -38,13 +39,13 @@ const TARGET_TYPES: LikedTargetType[] = ["photo", "prompt", "listing"];
  * at the same moment. This action then just looks for that row.
  */
 export async function sendSwipe(input: SwipeInput): Promise<SwipeResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return { ok: false, error: "Your session has ended. Please sign in again." };
+  // Signed in and a confirmed SRM student (the database checks this too).
+  const session = await getActionUser();
+  if (!session.ok) {
+    return { ok: false, error: session.error };
   }
+  const { user } = session;
+  const supabase = await createClient();
   if (!UUID.test(input.receiverId) || input.receiverId === user.id) {
     return { ok: false, error: "That profile isn't available." };
   }

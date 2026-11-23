@@ -129,6 +129,24 @@ export async function createUser(
 }
 
 /**
+ * An account from before sign-ups became SRM-only (migration 006), e.g. a
+ * personal-email test account. Created with the sign-up check bypassed.
+ */
+export async function createLegacyUser(db: Db, email: string): Promise<string> {
+  await db.exec("alter table auth.users disable trigger before_auth_user_created_srm_only");
+  try {
+    return await createUser(db, email);
+  } finally {
+    await db.exec("alter table auth.users enable trigger before_auth_user_created_srm_only");
+  }
+}
+
+/** A public URL for a file in a student's own media folder. */
+export function mediaUrl(userId: string, file: string): string {
+  return `https://example.supabase.co/storage/v1/object/public/roomie-media/${userId}/${file}`;
+}
+
+/**
  * Onboard a student directly (as the database owner), the way the current
  * onboarding form leaves a profile.
  */

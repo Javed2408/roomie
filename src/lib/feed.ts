@@ -38,6 +38,9 @@ export async function loadFeed(
     .select(PUBLIC_PROFILE_COLUMNS)
     .eq("mode", wantsOwners ? "have_flat" : "need_flat")
     .not("full_name", "is", null)
+    // Only SRM students appear: accounts from before sign-ups became
+    // SRM-only can't use Roomie, so they aren't shown either (011).
+    .eq("is_srm_verified", true)
     .not("id", "in", `(${excluded.join(",")})`)
     .order("updated_at", { ascending: false })
     .limit(200);

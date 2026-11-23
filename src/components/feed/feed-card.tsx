@@ -157,6 +157,9 @@ export function FeedCard({
         {headline(profile) && (
           <p className="text-muted text-sm">{headline(profile)}</p>
         )}
+        {profile.about && (
+          <p className="text-charcoal/90 text-base leading-relaxed">{profile.about}</p>
+        )}
         <div className="flex flex-wrap gap-2">
           <span className="bg-accent-soft text-accent-strong inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold">
             {isOwner ? (

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { DiscoverDeck } from "@/components/feed/discover-deck";
@@ -10,7 +9,7 @@ import { InstallBanner } from "@/components/ui/install-banner";
 import { Wordmark } from "@/components/ui/wordmark";
 import { loadFeed } from "@/lib/feed";
 import { parseFilters } from "@/lib/feed-filters";
-import { getCurrentUser, isOnboarded } from "@/lib/profile";
+import { requireStudent } from "@/lib/profile";
 
 export const metadata: Metadata = { title: "Discover · Roomie" };
 
@@ -19,13 +18,8 @@ async function Feed({
 }: {
   searchParams: PageProps<"/discover">["searchParams"];
 }) {
-  const current = await getCurrentUser();
-  if (!current) {
-    redirect("/login");
-  }
-  if (!current.profile || !isOnboarded(current.profile)) {
-    redirect("/onboarding");
-  }
+  // Signed in, a confirmed SRM student, and onboarded.
+  const current = await requireStudent();
   const filters = parseFilters(await searchParams);
   const candidates = await loadFeed(current.profile, current.listing, filters);
   const hasFilters =

@@ -231,39 +231,35 @@ describe("students: profile, housing status and preferences", () => {
     });
   });
 
+  // Photos and interests change only through set_profile_photos() and
+  // set_profile_interests() since 012; tests/db/profile-editor.test.mts
+  // covers them in depth.
   describe("photos", () => {
+    const photo = (id: string, name: string) =>
+      `https://example.supabase.co/storage/v1/object/public/roomie-media/${id}/${name}.jpg`;
+
     it("keep the main photo and the legacy avatar_url in step, both ways", async () => {
-      await as(db, ravi, () =>
-        db.query("insert into public.profile_photos (profile_id, url, position) values ($1, 'https://x/ravi-1.jpg', 0)", [ravi]),
-      );
+      await as(db, ravi, () => db.query("select public.set_profile_photos($1)", [[photo(ravi, "one")]]));
       let [profile] = await rows<{ avatar_url: string | null }>(db, "select avatar_url from public.profiles where id = $1", [ravi]);
-      assert.equal(profile.avatar_url, "https://x/ravi-1.jpg");
+      assert.equal(profile.avatar_url, photo(ravi, "one"));
 
-      await as(db, ravi, () => db.query("update public.profiles set avatar_url = 'https://x/ravi-2.jpg' where id = $1", [ravi]));
+      // The onboarding form still writes avatar_url directly.
+      await as(db, ravi, () => db.query("update public.profiles set avatar_url = $2 where id = $1", [ravi, photo(ravi, "two")]));
       const [main] = await rows<{ url: string }>(db, "select url from public.profile_photos where profile_id = $1 and position = 0", [ravi]);
-      assert.equal(main.url, "https://x/ravi-2.jpg");
+      assert.equal(main.url, photo(ravi, "two"));
 
-      await as(db, ravi, () => db.query("delete from public.profile_photos where profile_id = $1 and position = 0", [ravi]));
+      await as(db, ravi, () => db.query("select public.set_profile_photos($1)", [[]]));
       [profile] = await rows<{ avatar_url: string | null }>(db, "select avatar_url from public.profiles where id = $1", [ravi]);
       assert.equal(profile.avatar_url, null);
     });
 
-    it("allow up to six photos, only on your own profile", async () => {
+    it("can't be written directly, for yourself or anyone else", async () => {
       await as(db, ravi, async () => {
-        for (let position = 0; position < 6; position += 1) {
-          await db.query(
-            "insert into public.profile_photos (profile_id, url, position) values ($1, $2, $3)",
-            [ravi, `https://x/ravi-${position}.jpg`, position],
-          );
-        }
         await assert.rejects(
-          db.query("insert into public.profile_photos (profile_id, url, position) values ($1, 'https://x/7.jpg', 6)", [ravi]),
-          /check constraint/,
+          db.query("insert into public.profile_photos (profile_id, url, position) values ($1, $2, 1)", [ravi, photo(ravi, "x")]),
+          /permission denied/,
         );
-        await assert.rejects(
-          db.query("insert into public.profile_photos (profile_id, url, position) values ($1, 'https://x/a.jpg', 1)", [asha]),
-          /row-level security/,
-        );
+        await assert.rejects(db.query("delete from public.profile_photos where profile_id = $1", [asha]), /permission denied/);
       });
     });
   });
@@ -273,18 +269,22 @@ describe("students: profile, housing status and preferences", () => {
       const catalogue = await as(db, asha, () => rows<{ slug: string }>(db, "select slug from public.interests order by slug"));
       assert.ok(catalogue.length >= 11);
       await as(db, asha, async () => {
-        for (const { slug } of catalogue.slice(0, 10)) {
-          await db.query("insert into public.profile_interests (profile_id, interest) values ($1, $2)", [asha, slug]);
-        }
+        await db.query("select public.set_profile_interests($1)", [catalogue.slice(0, 10).map((row) => row.slug)]);
         await assert.rejects(
-          db.query("insert into public.profile_interests (profile_id, interest) values ($1, $2)", [asha, catalogue[10].slug]),
+          db.query("select public.set_profile_interests($1)", [catalogue.slice(0, 11).map((row) => row.slug)]),
           /up to 10 interests/,
         );
         await assert.rejects(
-          db.query("insert into public.profile_interests (profile_id, interest) values ($1, 'underwater-basket-weaving')", [ravi]),
-          /row-level security|foreign key/,
+          db.query("select public.set_profile_interests($1)", [["underwater-basket-weaving"]]),
+          /isn't on the list/,
+        );
+        await assert.rejects(
+          db.query("insert into public.profile_interests (profile_id, interest) values ($1, 'gym')", [asha]),
+          /permission denied/,
         );
       });
+      const [count] = await rows<{ n: number }>(db, "select count(*)::int as n from public.profile_interests where profile_id = $1", [asha]);
+      assert.equal(count.n, 10);
     });
 
     it("can't be added to the catalogue by students", async () => {

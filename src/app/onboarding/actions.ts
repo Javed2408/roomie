@@ -2,9 +2,10 @@
 
 import { redirect } from "next/navigation";
 
-import { MEDIA_BUCKET, isOwnMediaUrl } from "@/lib/media";
+import { isOwnMediaUrl } from "@/lib/media";
+import { removeUnusedMedia } from "@/lib/media-cleanup";
 import { checkAll, type OnboardingInput, type Problems } from "@/lib/onboarding";
-import { primaryListing } from "@/lib/profile";
+import { getActionUser, primaryListing } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 
 export type SaveResult = { error: string; problems?: Problems };
@@ -17,13 +18,12 @@ export type SaveResult = { error: string; problems?: Problems };
 export async function saveOnboarding(
   input: OnboardingInput,
 ): Promise<SaveResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return { error: "Your session has ended. Please sign in again." };
+  const session = await getActionUser();
+  if (!session.ok) {
+    return { error: session.error };
   }
+  const { user } = session;
+  const supabase = await createClient();
 
   const problems = checkAll(input);
   const photos = [
@@ -77,63 +77,23 @@ export async function saveOnboarding(
         error: `Your profile was saved, but the flat couldn't be: ${listingError.message}`,
       };
     }
-  } else {
-    // Switched to looking for a flat: hide any flat they listed before.
-    await supabase
-      .from("listings")
-      .update({ is_active: false })
-      .eq("owner_id", user.id);
   }
+  // Switching to "need a flat" never hides a listing by itself: students
+  // hide it explicitly (account page, or the housing settings in the
+  // profile editor, which asks first).
 
   await removeUnusedMedia(user.id);
   redirect(input.isFirstTime ? "/discover" : "/account");
 }
 
-/**
- * Delete files in this user's storage folder that nothing uses any more:
- * replaced or removed photos, and uploads abandoned before saving.
- *
- * "In use" is read back from the database after saving, so a hidden
- * listing keeps its photos. Clean-up never blocks a save: if it fails, the
- * files simply stay until the next save.
- */
-async function removeUnusedMedia(userId: string): Promise<void> {
-  const supabase = await createClient();
-  const [profileResult, listingsResult, { data: files }] = await Promise.all([
-    supabase.from("profiles").select("avatar_url").eq("id", userId).maybeSingle(),
-    // Every listing, live or not: their photos all stay.
-    supabase.from("listings").select("photos").eq("owner_id", userId),
-    supabase.storage.from(MEDIA_BUCKET).list(userId, { limit: 1000 }),
-  ]);
-  // If we can't tell what's in use, delete nothing.
-  if (!files || profileResult.error || listingsResult.error) {
-    return;
-  }
-  const inUse = new Set(
-    [
-      profileResult.data?.avatar_url,
-      ...(listingsResult.data ?? []).flatMap((listing) => listing.photos),
-    ]
-      .filter((url): url is string => Boolean(url))
-      .map((url) => url.split(`/public/${MEDIA_BUCKET}/`)[1]),
-  );
-  const unused = files
-    .map((file) => `${userId}/${file.name}`)
-    .filter((path) => !inUse.has(path));
-  if (unused.length > 0) {
-    await supabase.storage.from(MEDIA_BUCKET).remove(unused);
-  }
-}
-
 /** Show or hide your flat in the feed. */
 export async function setListingActive(active: boolean): Promise<void> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  const session = await getActionUser();
+  if (!session.ok) {
     redirect("/login");
   }
+  const { user } = session;
+  const supabase = await createClient();
   if (active) {
     // Only someone offering a flat can put it back in the feed.
     const { data: profile } = await supabase
