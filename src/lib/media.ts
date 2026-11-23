@@ -61,7 +61,7 @@ export async function uploadImage(
   kind: MediaKind,
   file: File,
 ): Promise<string> {
-  const ready = kind === "listing" ? file : await prepareImage(file);
+  const ready = await prepareImage(file);
   const problem = imageProblem(ready);
   if (problem) {
     throw new Error(problem);

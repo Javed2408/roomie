@@ -87,6 +87,8 @@ export type SwipeInput = {
   action: SwipeAction;
   targetType?: LikedTargetType;
   targetRef?: string;
+  /** The listing a like is about (a flat, or one of its photos). */
+  listingId?: string;
   comment?: string;
 };
 
@@ -137,6 +139,9 @@ export async function sendSwipe(input: SwipeInput): Promise<SwipeResult> {
       ? input.targetType
       : null;
   const targetRef = targetType ? (input.targetRef ?? "").slice(0, 200) || null : null;
+  // The database checks that the listing is live and belongs to them (014).
+  const listingId =
+    targetType && input.listingId && UUID.test(input.listingId) ? input.listingId : null;
 
   const { error } = await supabase.from("swipes").insert({
     sender_id: user.id,
@@ -144,12 +149,18 @@ export async function sendSwipe(input: SwipeInput): Promise<SwipeResult> {
     action: input.action,
     liked_target_type: targetType,
     liked_target_ref: targetRef,
+    liked_listing_id: listingId,
     comment,
   });
   // 23505: already decided on this person (e.g. a double tap). Not an error
   // for the person using the app: they simply move on.
   if (error && error.code !== "23505") {
-    return { ok: false, error: "That didn't go through. Please try again." };
+    return {
+      ok: false,
+      error: /isn't available/.test(error.message)
+        ? "That flat isn't available any more."
+        : "That didn't go through. Please try again.",
+    };
   }
   if (!isLike) {
     return { ok: true, match: null };

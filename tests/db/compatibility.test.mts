@@ -14,6 +14,7 @@ describe("backward compatibility with the current app", () => {
   let hunter: string;
   let outsider: string;
   let matchId: string;
+  let listingId: string;
 
   before(async () => {
     db = await createDatabase();
@@ -34,12 +35,18 @@ describe("backward compatibility with the current app", () => {
          where id = $1`,
         [owner],
       );
-      await db.query(
+      // Since 014 the listing is saved, then published through
+      // set_listing_status (students can't write is_active).
+      const [created] = await rows<{ id: string }>(
+        db,
         `insert into public.listings (owner_id, society, bhk_type, vacant_spots, rent_per_person,
-           maintenance_per_person, deposit_per_person, setup_cost, amenities, photos, is_active)
-         values ($1, 'Abode Valley', '3BHK', 1, 11500, 1500, 25000, 0, '{AC}', '{}', true)`,
+           maintenance_per_person, deposit_per_person, setup_cost, amenities, photos)
+         values ($1, 'Abode Valley', '3BHK', 1, 11500, 1500, 25000, 0, '{AC}', '{}')
+         returning id`,
         [owner],
       );
+      listingId = created.id;
+      await db.query("select public.set_listing_status($1, 'active')", [listingId]);
     });
     // And for a student looking for one.
     await as(db, hunter, () =>
@@ -68,8 +75,9 @@ describe("backward compatibility with the current app", () => {
   it("still turns two likes into exactly one match (the trigger from 001)", async () => {
     await as(db, hunter, () =>
       db.query(
-        "insert into public.swipes (sender_id, receiver_id, action, liked_target_type, liked_target_ref, comment) values ($1, $2, 'like', 'listing', 'flat', 'Is Wi-Fi included?')",
-        [hunter, owner],
+        // The app sends the listing id as the reference (014 checks it).
+        "insert into public.swipes (sender_id, receiver_id, action, liked_target_type, liked_target_ref, comment) values ($1, $2, 'like', 'listing', $3, 'Is Wi-Fi included?')",
+        [hunter, owner, listingId],
       ),
     );
     await as(db, owner, () =>
@@ -122,10 +130,12 @@ describe("backward compatibility with the current app", () => {
   it("still deactivates a listing when the student switches to looking for a flat", async () => {
     await as(db, owner, async () => {
       await db.query("update public.profiles set mode = 'need_flat' where id = $1", [owner]);
-      await db.query("update public.listings set is_active = false where owner_id = $1", [owner]);
+      await db.query("select public.set_listing_status($1, 'inactive')", [listingId]);
     });
     const [status] = await rows<{ status: string }>(db, "select status from public.housing_status where profile_id = $1", [owner]);
     assert.equal(status.status, "needs_accommodation");
+    const [listing] = await rows<{ status: string }>(db, "select status from public.listings where id = $1", [listingId]);
+    assert.equal(listing.status, "inactive");
   });
 
   it("still restricts media uploads to the student's own folder", async () => {

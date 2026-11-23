@@ -1,7 +1,9 @@
-import { BedDouble, ImageOff, MapPin, Users } from "lucide-react";
+import { ArrowRight, BedDouble, CalendarDays, DoorOpen, ImageOff, MapPin, Users } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { Card } from "@/components/ui/card";
+import { availabilityLabel } from "@/lib/listing-display";
 import { costs, formatInr } from "@/lib/onboarding";
 import type { ListingRow } from "@/types/database";
 
@@ -19,12 +21,15 @@ export function ListingCard({
   listing,
   showPhotos = true,
   corner,
+  href,
 }: {
   listing: ListingRow;
   /** The feed shows flat photos separately, each with its own like. */
   showPhotos?: boolean;
   /** Something pinned to the bottom-right corner, e.g. a like button. */
   corner?: ReactNode;
+  /** Link to the full listing page. */
+  href?: string;
 }) {
   const { monthly, moveIn } = costs(listing);
   return (
@@ -66,11 +71,20 @@ export function ListingCard({
             {listing.bhk_type}
           </span>
           <span className="bg-charcoal/5 inline-flex items-center gap-1 rounded-full px-3 py-1">
+            <DoorOpen aria-hidden="true" className="size-4" />
+            {listing.available_rooms} {listing.available_rooms === 1 ? "room" : "rooms"} free
+          </span>
+          <span className="bg-charcoal/5 inline-flex items-center gap-1 rounded-full px-3 py-1">
             <Users aria-hidden="true" className="size-4" />
             {listing.vacant_spots}{" "}
             {listing.vacant_spots === 1 ? "spot" : "spots"} open
           </span>
+          <span className="bg-charcoal/5 inline-flex items-center gap-1 rounded-full px-3 py-1">
+            <CalendarDays aria-hidden="true" className="size-4" />
+            {availabilityLabel(listing.available_from)}
+          </span>
         </div>
+        {listing.locality && <p className="text-muted -mt-2 text-sm">{listing.locality}</p>}
 
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-cream rounded-2xl p-3">
@@ -105,6 +119,15 @@ export function ListingCard({
               </li>
             ))}
           </ul>
+        )}
+        {href && (
+          <Link
+            href={href}
+            className="text-charcoal focus-visible:outline-accent inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold underline underline-offset-4 focus-visible:outline-2"
+          >
+            View full listing
+            <ArrowRight aria-hidden="true" className="size-4" />
+          </Link>
         )}
       </div>
       {corner}

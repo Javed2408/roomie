@@ -19,7 +19,9 @@ const SNAPSHOT_QUERIES = {
                     maintenance_per_person, deposit_per_person, setup_cost, amenities, photos,
                     is_active, created_at
              from public.listings order by id`,
-  swipes: "select * from public.swipes order by id",
+  // The columns from before the upgrade (014 adds liked_listing_id).
+  swipes: `select id, sender_id, receiver_id, action, liked_target_type, liked_target_ref, comment, created_at
+           from public.swipes order by id`,
   matches: "select * from public.matches order by id",
   messages: "select * from public.messages order by id",
 };

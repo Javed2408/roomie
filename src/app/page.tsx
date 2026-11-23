@@ -79,6 +79,13 @@ const SAMPLE: Candidate = {
     preferred_flatmate_gender: "any",
     flatmate_preferences: null,
     updated_at: "2026-01-01T00:00:00Z",
+    status: "active",
+    locality: null,
+    location_notes: null,
+    room_type: null,
+    furnishing: null,
+    house_rules: null,
+    living_arrangement: null,
   },
 };
 

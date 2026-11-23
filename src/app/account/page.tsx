@@ -1,11 +1,10 @@
-import { Check, ChevronRight, Eye, EyeOff, LogOut, Pencil } from "lucide-react";
+import { Building2, Check, ChevronRight, Eye, LogOut, Pencil } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
 import { signOut } from "@/app/login/actions";
-import { setListingActive } from "@/app/onboarding/actions";
-import { ListingCard } from "@/components/feed/listing-card";
+import { StatusBadge } from "@/components/listings/status-badge";
 import { AppShell } from "@/components/ui/app-shell";
 import { Avatar } from "@/components/ui/avatar";
 import { BottomNav } from "@/components/ui/bottom-nav";
@@ -18,6 +17,7 @@ import {
   HOUSING_STATUSES,
   SEEKING_OPTIONS,
 } from "@/lib/constants/preferences";
+import { listingTitle } from "@/lib/listing-display";
 import { requireStudent } from "@/lib/profile";
 import { loadProfileProgress, type ProfileProgress } from "@/lib/student";
 import { firstName, headline } from "@/types/feed";
@@ -147,59 +147,34 @@ async function AccountDetails() {
 
       {showFlat && (
         <section aria-labelledby="flat-heading">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 id="flat-heading" className="font-display text-xl font-semibold">
-              Your flat
-            </h2>
-            {progress.housing === "has_accommodation" && (
-              <ButtonLink
-                href="/onboarding?step=details"
-                variant="ghost"
-                className="min-h-11 px-3 text-sm"
-                aria-label="Edit your flat"
-              >
-                <Pencil aria-hidden="true" className="size-4" />
-                Edit
-              </ButtonLink>
-            )}
-          </div>
-          {listing ? (
-            <>
-              <ListingCard listing={listing} />
-              <form action={setListingActive.bind(null, !listing.is_active)} className="mt-3">
-                <Card className="flex items-center justify-between gap-3 p-4">
-                  <p className="text-sm">
-                    {listing.is_active ? (
-                      <>
-                        <strong className="text-forest">Live</strong>: students can find your flat.
-                      </>
-                    ) : (
-                      <>
-                        <strong>Hidden</strong>: nobody can see your flat.
-                      </>
-                    )}
-                  </p>
-                  {(listing.is_active || progress.housing === "has_accommodation") && (
-                    <Button type="submit" variant="secondary" className="min-h-11 shrink-0 px-4 text-sm">
-                      {listing.is_active ? (
-                        <EyeOff aria-hidden="true" className="size-4" />
-                      ) : (
-                        <Eye aria-hidden="true" className="size-4" />
-                      )}
-                      {listing.is_active ? "Hide" : "Show"}
-                    </Button>
-                  )}
-                </Card>
-              </form>
-            </>
-          ) : (
-            <Card className="p-5">
-              <p className="text-muted text-sm">Your flat isn&apos;t listed yet.</p>
-              <ButtonLink href="/onboarding?step=details" className="mt-3">
-                Add your flat
-              </ButtonLink>
-            </Card>
-          )}
+          <h2 id="flat-heading" className="font-display mb-3 text-xl font-semibold">
+            Your listings
+          </h2>
+          <Link
+            href="/account/listings"
+            className="bg-surface border-line rounded-card hover:border-charcoal/30 focus-visible:outline-accent flex items-center gap-3 border p-4 focus-visible:outline-2"
+          >
+            <span className="bg-forest-soft text-forest flex size-11 shrink-0 items-center justify-center rounded-full">
+              <Building2 aria-hidden="true" className="size-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              {listing ? (
+                <>
+                  <span className="block font-semibold">{listingTitle(listing)}</span>
+                  <span className="mt-1 block">
+                    <StatusBadge status={listing.status} />
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="block font-semibold">No listings yet</span>
+                  <span className="text-muted block text-sm">Create one when you have a room to share.</span>
+                </>
+              )}
+            </span>
+            <span className="text-sm font-semibold whitespace-nowrap">Manage</span>
+            <ChevronRight aria-hidden="true" className="text-muted size-4" />
+          </Link>
         </section>
       )}
 

@@ -61,57 +61,40 @@ export async function saveOnboarding(
   }
 
   if (isOwner) {
-    // Update their main listing (and make sure it's live), or create their
-    // first one. Students may keep several listings, so this goes by id.
+    // Update their main listing, or create their first one, then publish
+    // it (014: going live only happens through set_listing_status). Their
+    // main listing is the live one if any, so this never replaces another.
     const { data: existing, error: lookupError } = await primaryListing(supabase, user.id);
-    const fields = { ...input.listing!, is_active: true };
-    let listingError = lookupError;
-    if (!listingError) {
-      const saved = existing
-        ? await supabase.from("listings").update(fields).eq("id", existing.id)
-        : await supabase.from("listings").insert({ ...fields, owner_id: user.id });
-      listingError = saved.error;
+    const fields = input.listing!;
+    let problem: string | null = lookupError?.message ?? null;
+    let listingId = existing?.id ?? null;
+    if (!problem) {
+      if (existing) {
+        problem = (await supabase.from("listings").update(fields).eq("id", existing.id)).error?.message ?? null;
+      } else {
+        const created = await supabase
+          .from("listings")
+          .insert({ ...fields, owner_id: user.id })
+          .select("id")
+          .single();
+        problem = created.error?.message ?? null;
+        listingId = created.data?.id ?? null;
+      }
     }
-    if (listingError) {
-      return {
-        error: `Your profile was saved, but the flat couldn't be: ${listingError.message}`,
-      };
+    if (!problem && listingId) {
+      const published = await supabase.rpc("set_listing_status", { p_listing: listingId, p_status: "active" });
+      problem =
+        published.error?.message ??
+        (published.data === "conflict" ? "another listing is live. Choose one in Your listings." : null);
+    }
+    if (problem) {
+      return { error: `Your profile was saved, but the flat couldn't be: ${problem}` };
     }
   }
   // Switching to "need a flat" never hides a listing by itself: students
-  // hide it explicitly (account page, or the housing settings in the
+  // hide it explicitly (Your listings, or the housing settings in the
   // profile editor, which asks first).
 
   await removeUnusedMedia(user.id);
   redirect(input.isFirstTime ? "/discover" : "/account");
-}
-
-/** Show or hide your flat in the feed. */
-export async function setListingActive(active: boolean): Promise<void> {
-  const session = await getActionUser();
-  if (!session.ok) {
-    redirect("/login");
-  }
-  const { user } = session;
-  const supabase = await createClient();
-  if (active) {
-    // Only someone offering a flat can put it back in the feed.
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("mode")
-      .eq("id", user.id)
-      .maybeSingle();
-    if (profile?.mode !== "have_flat") {
-      redirect("/account");
-    }
-  }
-  // The main listing only: a student can keep several, one of them live.
-  const { data: listing } = await primaryListing(supabase, user.id);
-  if (listing) {
-    await supabase
-      .from("listings")
-      .update({ is_active: active })
-      .eq("id", listing.id);
-  }
-  redirect("/account");
 }

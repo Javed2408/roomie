@@ -273,10 +273,12 @@ export function FeedCard({
         <ListingCard
           listing={listing}
           showPhotos={false}
+          href={onLike ? `/listings/${listing.id}` : undefined}
           corner={heart(
             {
               type: "listing",
               ref: listing.id,
+              listingId: listing.id,
               title: `Liked: ${listing.society} ${listing.bhk_type} • ${formatInr(costs(listing).monthly)}/mo`,
               detail: `${listing.vacant_spots} ${listing.vacant_spots === 1 ? "spot" : "spots"} open · ${formatInr(costs(listing).moveIn)} to move in`,
             },
@@ -296,6 +298,7 @@ export function FeedCard({
               ref: `listing-photo-${index + 1}`,
               title: `Liked a photo of ${name}'s flat`,
               imageUrl: url,
+              listingId: listing.id,
             },
             `Like photo ${index + 1} of ${name}'s flat`,
           )}

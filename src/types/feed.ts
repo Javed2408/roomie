@@ -51,6 +51,8 @@ export type LikeTarget = {
   title: string;
   detail?: string;
   imageUrl?: string;
+  /** For a flat or a flat photo: which listing (014). */
+  listingId?: string;
 };
 
 /** "2" -> "2nd year" */

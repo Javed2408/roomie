@@ -193,7 +193,7 @@ export function StudentProfile({ student }: { student: PublicStudent }) {
       {listing ? (
         <section aria-label={`${name}'s flat`} className="space-y-2">
           <h2 className="font-display text-xl font-semibold">{name}&apos;s flat</h2>
-          <ListingCard listing={listing} />
+          <ListingCard listing={listing} href={`/listings/${listing.id}`} />
         </section>
       ) : (
         housing === "needs_accommodation" &&

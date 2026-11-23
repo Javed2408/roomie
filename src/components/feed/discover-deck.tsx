@@ -96,6 +96,7 @@ export function DiscoverDeck({
         action,
         targetType: target?.type,
         targetRef: target?.ref,
+        listingId: target?.listingId,
         comment,
       });
       if (!result.ok) {

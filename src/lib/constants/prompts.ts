@@ -115,9 +115,9 @@ export const DEPARTMENTS = [
 ] as const;
 
 /** Vacant spots a listing can offer. */
-export const MAX_VACANT_SPOTS = 4;
+export const MAX_VACANT_SPOTS = 6;
 /** Photos per listing. */
-export const MAX_LISTING_PHOTOS = 4;
+export const MAX_LISTING_PHOTOS = 8;
 
 /** The longest comment that can go with a like. */
 export const LIKE_COMMENT_MAX = 140;

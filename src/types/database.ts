@@ -1,6 +1,6 @@
 /**
  * TypeScript shapes of the database, matching
- * `supabase/migrations/` (001 to 013) exactly. Keep the two in sync: every
+ * `supabase/migrations/` (001 to 014) exactly. Keep the two in sync: every
  * change to the SQL needs the same change here.
  *
  * `Database` is in the format supabase-js expects, so queries are checked:
@@ -138,6 +138,7 @@ export type ListingRow = {
   amenities: Amenity[];
   /** Public URLs in the roomie-media bucket. */
   photos: string[];
+  /** True exactly when status is 'active' (014). Read-only for students. */
   is_active: boolean;
   created_at: string;
   // --- Added in 009 ---
@@ -152,6 +153,30 @@ export type ListingRow = {
   /** Short notes on the flatmate wanted. */
   flatmate_preferences: string | null;
   updated_at: string;
+  // --- Added in 014 ---
+  /** draft (never published), active (live) or inactive (deactivated). */
+  status: ListingStatus;
+  /** Area or locality, e.g. "Near the Arch gate". Public. */
+  locality: string | null;
+  /** Nearby landmarks or directions, without the exact address. Public. */
+  location_notes: string | null;
+  /** The spot on offer: a room of their own, or a shared room. */
+  room_type: ListingRoomType | null;
+  furnishing: Furnishing | null;
+  house_rules: string | null;
+  /** The current living arrangement and vibe. */
+  living_arrangement: string | null;
+}
+
+export type ListingStatus = "draft" | "active" | "inactive";
+export type ListingRoomType = "private" | "shared";
+export type Furnishing = "furnished" | "semi_furnished" | "unfurnished";
+
+/** The exact address of a listing (014): readable by its owner only. */
+export type ListingPrivateDetailsRow = {
+  listing_id: string;
+  address: string | null;
+  updated_at: string;
 }
 
 export type SwipeRow = {
@@ -163,6 +188,8 @@ export type SwipeRow = {
   liked_target_ref: string | null;
   comment: string | null;
   created_at: string;
+  /** The listing a like was about (014); null if none or since deleted. */
+  liked_listing_id: string | null;
 }
 
 export type MatchRow = {
@@ -357,8 +384,11 @@ type ProfileUpdate = Partial<
   >
 >;
 
-/** The listing fields a student may write (009): never id, owner or times. */
-type ListingWritable = Omit<ListingRow, "id" | "owner_id" | "created_at" | "updated_at">;
+/**
+ * The listing fields a student may write (009, 014): never id, owner,
+ * times, or status (that goes through set_listing_status()).
+ */
+type ListingWritable = Omit<ListingRow, "id" | "owner_id" | "created_at" | "updated_at" | "status" | "is_active">;
 type ListingInsert = Pick<ListingRow, "owner_id" | "society" | "bhk_type" | "rent_per_person"> &
   Partial<ListingWritable>;
 type ListingUpdate = Partial<ListingWritable>;
@@ -403,7 +433,7 @@ type GroupUpdate = Partial<Omit<GroupRow, "id" | "created_by" | Generated>>;
 
 type SwipeInsert = Pick<SwipeRow, "sender_id" | "receiver_id" | "action"> &
   Partial<
-    Pick<SwipeRow, "liked_target_type" | "liked_target_ref" | "comment">
+    Pick<SwipeRow, "liked_target_type" | "liked_target_ref" | "comment" | "liked_listing_id">
   >;
 
 /** The id may be chosen by the app (migration 004); the time never is. */
@@ -516,6 +546,12 @@ export type Database = {
         Update: PracticalPreferencesUpdate;
         Relationships: Relationship[];
       };
+      listing_private_details: {
+        Row: ListingPrivateDetailsRow;
+        Insert: Pick<ListingPrivateDetailsRow, "listing_id" | "address">;
+        Update: Pick<ListingPrivateDetailsRow, "address">;
+        Relationships: Relationship[];
+      };
       blocks: {
         Row: BlockRow;
         Insert: Pick<BlockRow, "blocker_id" | "blocked_id">;
@@ -567,6 +603,15 @@ export type Database = {
       discovery_candidates: {
         Args: { p_filters?: Record<string, unknown>; p_exclude?: string[]; p_limit?: number };
         Returns: DiscoveryCandidateRow[];
+      };
+      /**
+       * Publish ('active') or deactivate ('inactive') your listing (014).
+       * Returns the new status, or 'conflict' when another listing is live
+       * and p_replace doesn't name it (then nothing changes).
+       */
+      set_listing_status: {
+        Args: { p_listing: string; p_status: "active" | "inactive"; p_replace?: string | null };
+        Returns: "active" | "inactive" | "conflict";
       };
       // Checks used by policies, callable by signed-in students (009, 010).
       has_accommodation: { Args: Record<string, never>; Returns: boolean };
