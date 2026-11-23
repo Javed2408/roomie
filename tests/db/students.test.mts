@@ -42,9 +42,9 @@ describe("students: profile, housing status and preferences", () => {
       assert.equal(profile.mode, "have_flat");
     });
 
-    it("gives first-time students discovery defaults that match today's feed", async () => {
+    it("gives first-time students discovery defaults that don't depend on their housing (013)", async () => {
       const [prefs] = await rows(db, "select discover_housing, seeking from public.discovery_preferences where profile_id = $1", [asha]);
-      assert.deepEqual(prefs, { discover_housing: "needs_accommodation", seeking: "either" });
+      assert.deepEqual(prefs, { discover_housing: "both", seeking: "either" });
     });
 
     it("can be changed on its own, and the legacy mode follows", async () => {

@@ -1,9 +1,86 @@
 "use server";
 
+import { refresh } from "next/cache";
+
+import { DISCOVER_HOUSING_OPTIONS, SEEKING_OPTIONS } from "@/lib/constants/preferences";
 import { LIKE_COMMENT_MAX } from "@/lib/constants/prompts";
+import { loadFeedPage, type FeedPage } from "@/lib/feed";
+import { parseFilters } from "@/lib/feed-filters";
 import { getActionUser } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
-import type { LikedTargetType, SwipeAction } from "@/types/database";
+import type { DiscoverHousing, LikedTargetType, Seeking, SwipeAction } from "@/types/database";
+
+/**
+ * The next page of the feed. `query` is the page's filter query string;
+ * `shown` the people already loaded, so nobody appears twice.
+ */
+export async function loadMoreCandidates(
+  query: string,
+  shown: string[],
+): Promise<{ ok: true; page: FeedPage } | { ok: false; error: string }> {
+  const session = await getActionUser();
+  if (!session.ok) {
+    return { ok: false, error: session.error };
+  }
+  if (typeof query !== "string" || query.length > 2000 || !Array.isArray(shown) || shown.length > 1000) {
+    return { ok: false, error: "Couldn't load more people." };
+  }
+  const params: Record<string, string[]> = {};
+  for (const [key, value] of new URLSearchParams(query)) {
+    params[key] = [...(params[key] ?? []), value];
+  }
+  try {
+    const page = await loadFeedPage(
+      session.user.id,
+      parseFilters(params),
+      shown.filter((id) => typeof id === "string" && UUID.test(id)),
+    );
+    return { ok: true, page };
+  } catch {
+    return { ok: false, error: "Couldn't load more people. Please try again." };
+  }
+}
+
+/**
+ * Save whom to discover and how they'd like to live, from Discover itself.
+ * Only these two settings change; the feed then reloads with them.
+ */
+export async function saveDiscoverySettings(input: {
+  discoverHousing: DiscoverHousing;
+  seeking: Seeking;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await getActionUser();
+  if (!session.ok) {
+    return { ok: false, error: session.error };
+  }
+  const discover = DISCOVER_HOUSING_OPTIONS.find((option) => option.value === input?.discoverHousing)?.value;
+  const seeking = SEEKING_OPTIONS.find((option) => option.value === input?.seeking)?.value;
+  if (!discover || !seeking) {
+    return { ok: false, error: "Choose who to discover and how you'd like to live." };
+  }
+  const supabase = await createClient();
+  // Update in place (students may only change these two columns); create
+  // the row only if this student somehow has none yet.
+  const updated = await supabase
+    .from("discovery_preferences")
+    .update({ discover_housing: discover, seeking })
+    .eq("profile_id", session.user.id)
+    .select("profile_id");
+  const error =
+    updated.error ??
+    (updated.data?.length === 0
+      ? (
+          await supabase
+            .from("discovery_preferences")
+            .insert({ profile_id: session.user.id, discover_housing: discover, seeking })
+        ).error
+      : null);
+  if (error) {
+    return { ok: false, error: "That didn't save. Please try again." };
+  }
+  refresh();
+  return { ok: true };
+}
 
 export type SwipeInput = {
   receiverId: string;

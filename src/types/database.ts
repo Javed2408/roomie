@@ -1,6 +1,6 @@
 /**
  * TypeScript shapes of the database, matching
- * `supabase/migrations/` (001 to 012) exactly. Keep the two in sync: every
+ * `supabase/migrations/` (001 to 013) exactly. Keep the two in sync: every
  * change to the SQL needs the same change here.
  *
  * `Database` is in the format supabase-js expects, so queries are checked:
@@ -262,6 +262,33 @@ export type PracticalPreferencesRow = {
   updated_at: string;
 }
 
+/** One student blocking another (013). Readable only by the blocker. */
+export type BlockRow = {
+  blocker_id: string;
+  blocked_id: string;
+  created_at: string;
+}
+
+/** A row from discovery_candidates() (013). */
+export type DiscoveryCandidateRow = {
+  candidate_id: string;
+  housing: HousingStatus;
+  seeking: Seeking;
+  /** Their live listing, if they have a place and one is live. */
+  listing_id: string | null;
+  last_active: string;
+  lifestyle: Partial<Omit<LifestylePreferencesRow, "profile_id" | "created_at" | "updated_at">> | null;
+  interests: string[];
+  /**
+   * How they compare with the viewer's private practical preferences:
+   * "match" | "close" | "mismatch" (amenities: share 0-1). Keys are
+   * missing when either side hasn't said.
+   */
+  facts: Partial<Record<"budget" | "societies" | "move_in" | "room_type" | "bhk" | "gender", "match" | "close" | "mismatch">> & {
+    amenities?: number;
+  };
+}
+
 // --- Groups (010) ---------------------------------------------------------------
 
 export type GroupRow = {
@@ -489,6 +516,12 @@ export type Database = {
         Update: PracticalPreferencesUpdate;
         Relationships: Relationship[];
       };
+      blocks: {
+        Row: BlockRow;
+        Insert: Pick<BlockRow, "blocker_id" | "blocked_id">;
+        Update: never;
+        Relationships: Relationship[];
+      };
       groups: {
         Row: GroupRow;
         Insert: GroupInsert;
@@ -526,6 +559,14 @@ export type Database = {
           p_hide_listings?: boolean;
         };
         Returns: undefined;
+      };
+      /**
+       * Who may appear in the signed-in student's feed (013): eligibility,
+       * their discovery preference, blocks, past decisions and filters.
+       */
+      discovery_candidates: {
+        Args: { p_filters?: Record<string, unknown>; p_exclude?: string[]; p_limit?: number };
+        Returns: DiscoveryCandidateRow[];
       };
       // Checks used by policies, callable by signed-in students (009, 010).
       has_accommodation: { Args: Record<string, never>; Returns: boolean };

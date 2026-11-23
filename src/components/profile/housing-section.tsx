@@ -96,14 +96,8 @@ export function HousingSection({
   const section = useSectionSave<HousingInput>(
     {
       status: housing ?? "",
-      // Without saved preferences, start from what Discover does today.
-      discover_housing:
-        discovery?.discover_housing ??
-        (housing === "has_accommodation"
-          ? "needs_accommodation"
-          : housing === "needs_accommodation"
-            ? "has_accommodation"
-            : "both"),
+      // Without saved preferences, Discover shows everyone (013).
+      discover_housing: discovery?.discover_housing ?? "both",
       seeking: discovery?.seeking ?? "either",
       hide_listings: false,
     },
@@ -175,8 +169,8 @@ export function HousingSection({
 
         <p className="text-muted flex gap-2 text-sm leading-relaxed">
           <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          Discover will follow these choices in an upcoming update. For now it matches people
-          by housing: those with a place see those looking, and the other way round.
+          Discover shows exactly who you choose here, whatever your own housing. You can also
+          change it from Discover. Group discovery is coming in a later update.
         </p>
       </div>
 

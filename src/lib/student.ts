@@ -155,6 +155,21 @@ export async function loadPublicStudent(profileId: string): Promise<PublicStuden
   };
 }
 
+/** Has this student blocked that one? (Blocks are visible to the blocker only.) */
+export async function hasBlocked(blockerId: string, blockedId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const row = must(
+    await supabase
+      .from("blocks")
+      .select("blocked_id")
+      .eq("blocker_id", blockerId)
+      .eq("blocked_id", blockedId)
+      .maybeSingle(),
+    "blocks",
+  );
+  return Boolean(row);
+}
+
 /** How complete a profile is, for the account page's checklist. */
 export type ProfileProgress = {
   photos: number;

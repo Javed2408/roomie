@@ -4,16 +4,42 @@
  */
 
 import type {
+  HousingStatus,
+  InterestRow,
+  LifestylePreferencesRow,
   LikedTargetType,
   ListingRow,
   PublicProfile,
+  Seeking,
 } from "@/types/database";
 
-/** One person in the feed, with their flat if they're offering one. */
+/** A person with their flat, if they're offering one. */
 export type Candidate = {
   profile: PublicProfile;
-  /** Only for 'have_flat' people, and only while their flat is live. */
+  /** Only for people with a place, and only while their flat is live. */
   listing: ListingRow | null;
+};
+
+/** What the card shows about compatibility: only what the server worked out. */
+export type CompatibilityView = {
+  /** 0-100, only when there is enough data to stand behind it. */
+  percent: number | null;
+  reasons: string[];
+  differences: string[];
+  /** How many things were compared. */
+  compared: number;
+  breakdown: Array<{ label: string; score: number | null }>;
+};
+
+/** One person in the Discover feed, with everything the card shows. */
+export type DiscoveryCandidate = Candidate & {
+  /** In order; the first is the main photo. */
+  photos: string[];
+  interests: InterestRow[];
+  lifestyle: Partial<Omit<LifestylePreferencesRow, "profile_id" | "created_at" | "updated_at">> | null;
+  housing: HousingStatus;
+  seeking: Seeking;
+  compatibility: CompatibilityView;
 };
 
 /** The exact thing someone liked, Hinge-style. */

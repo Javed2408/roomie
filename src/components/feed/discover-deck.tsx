@@ -1,30 +1,44 @@
 "use client";
 
-import { RotateCcw, Sparkles, X } from "lucide-react";
+import { LoaderCircle, RotateCcw, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useRef, useState, useTransition } from "react";
 
-import { sendSwipe, type SwipeResult } from "@/app/discover/actions";
+import { loadMoreCandidates, sendSwipe, type SwipeResult } from "@/app/discover/actions";
 import { FeedCard } from "@/components/feed/feed-card";
 import { LikeSheet, MatchOverlay } from "@/components/feed/like-sheet";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { firstName, type Candidate, type LikeTarget } from "@/types/feed";
+import { firstName, type DiscoveryCandidate, type LikeTarget } from "@/types/feed";
 
 type Match = Extract<SwipeResult, { match: object }>["match"];
 
+/** Start loading the next page this many people before the end. */
+const PREFETCH_AT = 2;
+
 /**
  * The discovery feed: one person at a time. Scroll through their profile,
- * like something specific (with an optional comment) or pass.
+ * like something specific (with an optional comment) or pass. More people
+ * load in pages as you go, never repeating anyone already shown.
  */
 export function DiscoverDeck({
-  candidates,
+  initial,
+  initialHasMore,
+  query,
   hasFilters,
 }: {
-  candidates: Candidate[];
+  initial: DiscoveryCandidate[];
+  initialHasMore: boolean;
+  /** The page's filter query string, for loading more. */
+  query: string;
   hasFilters: boolean;
 }) {
   const router = useRouter();
+  const [candidates, setCandidates] = useState(initial);
+  const [hasMore, setHasMore] = useState(initialHasMore);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const loading = useRef(false);
   const [index, setIndex] = useState(0);
   const [target, setTarget] = useState<LikeTarget | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -37,9 +51,38 @@ export function DiscoverDeck({
     setError(null);
   }, []);
 
+  const loadMore = useCallback(async () => {
+    if (loading.current) {
+      return;
+    }
+    loading.current = true;
+    setIsLoadingMore(true);
+    setLoadError(null);
+    const result = await loadMoreCandidates(
+      query,
+      candidates.map((candidate) => candidate.profile.id),
+    );
+    if (result.ok) {
+      setCandidates((existing) => {
+        const known = new Set(existing.map((candidate) => candidate.profile.id));
+        return [...existing, ...result.page.candidates.filter((candidate) => !known.has(candidate.profile.id))];
+      });
+      setHasMore(result.page.hasMore);
+    } else {
+      setLoadError(result.error);
+    }
+    loading.current = false;
+    setIsLoadingMore(false);
+  }, [candidates, query]);
+
   function advance() {
-    setIndex((value) => value + 1);
+    const next = index + 1;
+    setIndex(next);
     window.scrollTo({ top: 0 });
+    // Fetch the next page shortly before running out.
+    if (hasMore && candidates.length - next <= PREFETCH_AT) {
+      void loadMore();
+    }
   }
 
   function decide(action: "like" | "pass", comment = "") {
@@ -67,6 +110,15 @@ export function DiscoverDeck({
     });
   }
 
+  if (!current && isLoadingMore) {
+    return (
+      <div className="text-muted flex items-center justify-center gap-2 py-16 text-sm" role="status">
+        <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
+        Finding more people…
+      </div>
+    );
+  }
+
   if (!current) {
     return (
       <div className="rounded-card border-line flex flex-col items-center border border-dashed px-6 py-14 text-center">
@@ -74,14 +126,26 @@ export function DiscoverDeck({
           <Sparkles aria-hidden="true" className="size-7" />
         </span>
         <h2 className="font-display mt-4 text-2xl font-semibold">
-          You&apos;ve seen everyone nearby!
+          {hasMore
+            ? "There are more people to see"
+            : candidates.length > 0
+              ? "You've seen everyone for now"
+              : "No one to show yet"}
         </h2>
         <p className="text-muted mt-2 max-w-xs text-sm leading-relaxed">
-          {hasFilters
-            ? "Reset your filters to see more people, or check back soon."
-            : "New students join all the time. Check back soon."}
+          {loadError
+            ? loadError
+            : hasFilters
+              ? "Your filters are narrowing things down. Try removing one, or check back soon."
+              : "Roomie is still growing, and new students join all the time. Check back soon, or change who you discover above."}
         </p>
         <div className="mt-6 flex flex-col gap-2">
+          {hasMore && (
+            <Button onClick={() => void loadMore()}>
+              <RotateCcw aria-hidden="true" className="size-4" />
+              Load more people
+            </Button>
+          )}
           {hasFilters && (
             <ButtonLink href="/discover" variant="primary">
               Reset filters
@@ -103,7 +167,7 @@ export function DiscoverDeck({
   return (
     <>
       <p className="sr-only" aria-live="polite">
-        Showing {name}, {index + 1} of {candidates.length}.
+        Showing {name}.
       </p>
       <FeedCard
         key={current.profile.id}
@@ -144,8 +208,11 @@ export function DiscoverDeck({
       )}
       {match && <MatchOverlay {...match} onContinue={() => setMatch(null)} />}
       <p className="text-muted mt-6 text-center text-xs">
-        {candidates.length - index - 1} more after {name} ·{" "}
-        <Link href="/account" className="underline">
+        {hasMore
+          ? "More people after this"
+          : `${candidates.length - index - 1} more after ${name}`}{" "}
+        ·{" "}
+        <Link href="/profile/edit" className="underline">
           Your profile
         </Link>
       </p>

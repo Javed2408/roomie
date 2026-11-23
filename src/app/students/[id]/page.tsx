@@ -3,13 +3,15 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { BlockControl } from "@/components/profile/block-control";
 import { StudentProfile } from "@/components/profile/student-profile";
 import { AppShell } from "@/components/ui/app-shell";
 import { BottomNav } from "@/components/ui/bottom-nav";
 import { ButtonLink } from "@/components/ui/button";
 import { Wordmark } from "@/components/ui/wordmark";
 import { requireStudent } from "@/lib/profile";
-import { loadPublicStudent } from "@/lib/student";
+import { hasBlocked, loadPublicStudent } from "@/lib/student";
+import { firstName } from "@/types/feed";
 
 export const metadata: Metadata = { title: "Profile · Roomie" };
 
@@ -22,6 +24,7 @@ async function Profile({ params }: { params: PageProps<"/students/[id]">["params
     notFound();
   }
   const isOwn = id === viewer.user.id;
+  const blocked = isOwn ? false : await hasBlocked(viewer.user.id, id);
   return (
     <>
       {isOwn && (
@@ -37,6 +40,9 @@ async function Profile({ params }: { params: PageProps<"/students/[id]">["params
         </div>
       )}
       <StudentProfile student={student} />
+      {!isOwn && !student.profile.is_sample && (
+        <BlockControl studentId={id} name={firstName(student.profile)} blocked={blocked} />
+      )}
     </>
   );
 }

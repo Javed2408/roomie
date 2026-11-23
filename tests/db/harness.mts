@@ -35,7 +35,9 @@ const SUPABASE_STAND_IN = `
     email_confirmed_at timestamptz,
     raw_user_meta_data jsonb not null default '{}',
     raw_app_meta_data  jsonb not null default '{}',
-    created_at         timestamptz not null default now(),
+    banned_until       timestamptz,
+    deleted_at         timestamptz,
+    created_at        timestamptz not null default now(),
     updated_at         timestamptz not null default now()
   );
   create function auth.uid() returns uuid language sql stable as $$

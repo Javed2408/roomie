@@ -34,7 +34,7 @@ export const getPendingLikes = cache(async function getPendingLikes(
   userId: string,
 ): Promise<SwipeRow[]> {
   const supabase = await createClient();
-  const [{ data: received }, { data: answered }] = await Promise.all([
+  const [{ data: received }, { data: answered }, { data: blocked }] = await Promise.all([
     supabase
       .from("swipes")
       .select("*")
@@ -42,8 +42,13 @@ export const getPendingLikes = cache(async function getPendingLikes(
       .eq("action", "like")
       .order("created_at", { ascending: false }),
     supabase.from("swipes").select("receiver_id").eq("sender_id", userId),
+    // Likes from people you've blocked are hidden (013).
+    supabase.from("blocks").select("blocked_id").eq("blocker_id", userId),
   ]);
-  const decided = new Set((answered ?? []).map((row) => row.receiver_id));
+  const decided = new Set([
+    ...(answered ?? []).map((row) => row.receiver_id),
+    ...(blocked ?? []).map((row) => row.blocked_id),
+  ]);
   const waiting = (received ?? []).filter((like) => !decided.has(like.sender_id));
   if (waiting.length === 0) {
     return [];

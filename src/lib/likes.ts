@@ -7,8 +7,8 @@ import type { LikedThing } from "@/types/matches";
  * person who was liked.
  *
  * `possessive` is "your" when they liked you, or e.g. "Asha's".
- * (Targets come from `FeedCard`: "avatar", "listing-photo-2", a prompt's
- * question or the listing id.)
+ * (Targets come from `FeedCard`: "avatar", "photo-2", "listing-photo-2",
+ * a prompt's question or the listing id.)
  */
 export function describeLikedThing(
   like: Pick<SwipeRow, "liked_target_type" | "liked_target_ref">,
@@ -29,9 +29,11 @@ export function describeLikedThing(
           imageUrl: owner.listing?.photos[Number(flatPhoto[1]) - 1],
         };
       }
+      // "avatar" is the main photo; "photo-2".."photo-6" are the others
+      // (Discover, 013), whose image isn't loaded here, so none is shown.
       return {
         phrase: `${possessive} photo`,
-        imageUrl: owner.profile.avatar_url ?? undefined,
+        imageUrl: ref === "avatar" ? (owner.profile.avatar_url ?? undefined) : undefined,
       };
     }
     case "prompt":
