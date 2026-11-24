@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Fragment, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import { Composer } from "@/components/chat/composer";
+import { ProfileLink } from "@/components/chat/profile-link";
 import { GroupChatHeader, type Connection } from "@/components/groups/group-chat-header";
 import { AppShell } from "@/components/ui/app-shell";
 import { Avatar } from "@/components/ui/avatar";
@@ -25,6 +26,7 @@ import {
   type GroupChatMessage,
 } from "@/lib/group-chat";
 import type { ChatPerson, GroupChatData } from "@/lib/group-chats";
+import { groupSenderProfile } from "@/lib/profile-links";
 import { createClient } from "@/lib/supabase/client";
 import { subscribeAsUser } from "@/lib/supabase/realtime";
 import { clockTime, dayLabel, type Days } from "@/lib/time";
@@ -455,6 +457,7 @@ export function GroupChatRoom({
           const mine = message.sender_id === myId;
           const sender = message.sender_id ? people[message.sender_id] : undefined;
           const senderName = sender?.name ?? "Former member";
+          const profile = groupSenderProfile(message, people);
           return (
             <Fragment key={message.id}>
               {startsDay && (
@@ -470,11 +473,31 @@ export function GroupChatRoom({
                 <li className={`flex gap-2 ${mine ? "justify-end" : "justify-start"} ${startsRun && !startsDay ? "mt-4" : "mt-1"}`}>
                   {!mine && (
                     <div className="w-8 shrink-0 self-end">
-                      {endsRun && <Avatar url={sender?.avatarUrl ?? null} name={senderName} className="size-8 rounded-full text-xs" />}
+                      {endsRun && (
+                        // The 32px photo gets a 48px tap area (the ::after).
+                        <ProfileLink
+                          href={profile}
+                          role="photo"
+                          className="relative block rounded-full"
+                          linkClassName="transition-opacity after:absolute after:-inset-2 hover:opacity-80"
+                        >
+                          <Avatar url={sender?.avatarUrl ?? null} name={senderName} className="size-8 rounded-full text-xs" />
+                        </ProfileLink>
+                      )}
                     </div>
                   )}
                   <div className={`flex max-w-[80%] flex-col ${mine ? "items-end" : "items-start"}`}>
-                    {!mine && startsRun && <p className="text-muted mb-1 px-1 text-xs font-semibold">{senderName}</p>}
+                    {!mine && startsRun && (
+                      <p className="text-muted mb-1 px-1 text-xs font-semibold">
+                        <ProfileLink
+                          href={profile}
+                          label={`${senderName}'s profile`}
+                          linkClassName="hover:text-charcoal relative rounded-sm underline-offset-2 after:absolute after:-inset-x-1 after:-top-3 after:-bottom-1 hover:underline"
+                        >
+                          {senderName}
+                        </ProfileLink>
+                      </p>
+                    )}
                     <p
                       className={`rounded-3xl px-4 py-2.5 text-[15px] leading-snug break-words whitespace-pre-wrap ${
                         mine ? "bg-charcoal text-cream rounded-br-lg" : "bg-surface border-line rounded-bl-lg border"

@@ -4,6 +4,7 @@ import { ArrowLeft, Home, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { ProfileLink } from "@/components/chat/profile-link";
 import { FeedCard } from "@/components/feed/feed-card";
 import { Avatar } from "@/components/ui/avatar";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -11,11 +12,13 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { SafetyTip } from "@/components/ui/safety-tip";
 import { SrmMark } from "@/components/ui/srm-badge";
 import { lookingFor } from "@/lib/likes";
+import { profileHref } from "@/lib/profile-links";
 import { firstName, type Candidate } from "@/types/feed";
 
 /**
- * The chat's sticky top bar: back, who you're talking to, and their full
- * profile and flat (with the cost breakdown) one tap away.
+ * The chat's sticky top bar: back, who you're talking to (their photo and
+ * name open their full profile page), and a quick look at their profile and
+ * flat (with the cost breakdown) in a sheet.
  */
 export function ChatHeader({ them }: { them: Candidate }) {
   const [showProfile, setShowProfile] = useState(false);
@@ -31,18 +34,26 @@ export function ChatHeader({ them }: { them: Candidate }) {
       >
         <ArrowLeft aria-hidden="true" className="size-5" />
       </Link>
-      <Avatar
-        url={them.profile.avatar_url}
-        name={name}
-        className="size-10 rounded-full text-base"
-      />
-      <div className="min-w-0 flex-1">
-        <h1 className="flex items-center gap-1.5 font-semibold">
-          <span className="truncate">{name}</span>
-          {them.profile.is_srm_verified && <SrmMark />}
-        </h1>
-        <p className="text-muted truncate text-xs">{lookingFor(them)}</p>
-      </div>
+      <ProfileLink
+        href={profileHref(them.profile.id)}
+        label={`${name}'s profile`}
+        fallback="div"
+        className="flex min-h-12 min-w-0 flex-1 items-center gap-2 rounded-xl pr-2"
+        linkClassName="hover:bg-charcoal/5"
+      >
+        <Avatar
+          url={them.profile.avatar_url}
+          name={name}
+          className="size-10 rounded-full text-base"
+        />
+        <div className="min-w-0 flex-1">
+          <h1 className="flex items-center gap-1.5 font-semibold">
+            <span className="truncate">{name}</span>
+            {them.profile.is_srm_verified && <SrmMark />}
+          </h1>
+          <p className="text-muted truncate text-xs">{lookingFor(them)}</p>
+        </div>
+      </ProfileLink>
       <Button
         variant="secondary"
         className="shrink-0 px-4 text-sm"
