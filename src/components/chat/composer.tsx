@@ -20,6 +20,8 @@ export function Composer({
   newBelow,
   onJumpToNew,
   isOffline,
+  offlineNote = "Live updates are paused. Refresh the page to see new messages.",
+  showCount = false,
 }: {
   name: string;
   /** Shown while the chat is empty; tapping one sends it. */
@@ -29,6 +31,10 @@ export function Composer({
   newBelow: boolean;
   onJumpToNew: () => void;
   isOffline: boolean;
+  /** What to say while live updates are down. */
+  offlineNote?: string;
+  /** Show "n/limit" as the message nears the length limit. */
+  showCount?: boolean;
 }) {
   const [text, setText] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -71,9 +77,10 @@ export function Composer({
         </button>
       )}
 
-      {isOffline && (
-        <p className="text-muted mb-2 px-1 text-xs">
-          Live updates are paused. Refresh the page to see new messages.
+      {isOffline && <p className="text-muted mb-2 px-1 text-xs">{offlineNote}</p>}
+      {showCount && text.length >= MESSAGE_MAX * 0.8 && (
+        <p className="text-muted mb-2 px-1 text-right text-xs tabular-nums" aria-live="polite">
+          {text.length}/{MESSAGE_MAX}
         </p>
       )}
 

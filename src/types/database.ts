@@ -1,6 +1,6 @@
 /**
  * TypeScript shapes of the database, matching
- * `supabase/migrations/` (001 to 015) exactly. Keep the two in sync: every
+ * `supabase/migrations/` (001 to 016) exactly. Keep the two in sync: every
  * change to the SQL needs the same change here.
  *
  * `Database` is in the format supabase-js expects, so queries are checked:
@@ -383,6 +383,51 @@ export type NotificationRow = {
   created_at: string;
 }
 
+export type GroupSystemKind = "joined" | "left" | "removed" | "made_admin" | "removed_admin";
+
+/**
+ * A message in a group's chat (016). User messages have a sender and
+ * content; system messages ("X joined") have a kind, a subject and an actor
+ * and are written by the database only. Immutable.
+ */
+export type GroupMessageRow = {
+  id: string;
+  group_id: string;
+  /** Null for system messages, and after a sender deletes their account. */
+  sender_id: string | null;
+  message_type: "user" | "system";
+  content: string | null;
+  system_kind: GroupSystemKind | null;
+  subject_id: string | null;
+  actor_id: string | null;
+  event_id: string | null;
+  /** Always set by the database. */
+  created_at: string;
+}
+
+/** Where a member has read a group's chat up to (016). Changed only by mark_group_chat_read(). */
+export type GroupChatReadRow = {
+  group_id: string;
+  profile_id: string;
+  last_read_at: string;
+  updated_at: string;
+}
+
+/** A row from group_chat_summaries() (016): one per group you're in. */
+export type GroupChatSummaryRow = {
+  group_id: string;
+  /** Other people's ordinary messages since you last read (stops at 100). */
+  unread_count: number;
+  last_id: string | null;
+  last_at: string | null;
+  last_type: "user" | "system" | null;
+  last_content: string | null;
+  last_sender_id: string | null;
+  last_system_kind: GroupSystemKind | null;
+  last_subject_id: string | null;
+  last_actor_id: string | null;
+}
+
 /** A row from discover_groups() (015). */
 export type DiscoverGroupRow = {
   group_id: string;
@@ -654,6 +699,21 @@ export type Database = {
         Update: Pick<NotificationRow, "read_at">;
         Relationships: Relationship[];
       };
+      group_messages: {
+        Row: GroupMessageRow;
+        /** Ordinary messages only; the time and type come from the database. */
+        Insert: Pick<GroupMessageRow, "group_id" | "sender_id" | "content"> & Partial<Pick<GroupMessageRow, "id">>;
+        /** Messages are immutable. */
+        Update: never;
+        Relationships: Relationship[];
+      };
+      group_chat_reads: {
+        Row: GroupChatReadRow;
+        /** Only through mark_group_chat_read(). */
+        Insert: never;
+        Update: never;
+        Relationships: Relationship[];
+      };
     };
     Views: {
       /** The newest message in each match you're part of (migration 004). */
@@ -719,6 +779,25 @@ export type Database = {
         Args: { p_group: string; p_query: string; p_limit?: number };
         Returns: GroupInviteCandidate[];
       };
+      /**
+       * "I've read this group's chat up to here" (016). Never moves back.
+       * Active members only.
+       */
+      mark_group_chat_read: {
+        Args: { p_group: string; p_up_to?: string | null };
+        Returns: string;
+      };
+      /** Unread count and newest message for each group you're in (016). */
+      group_chat_summaries: {
+        Args: Record<string, never>;
+        Returns: GroupChatSummaryRow[];
+      };
+      /**
+       * Is this group message hidden from you by a block, either way (016)?
+       * Used by the read policy; true only for an eligible student in a
+       * group they're active in.
+       */
+      group_message_blocked: { Args: { p_message: string }; Returns: boolean };
       /** Discoverable groups for the signed-in student (015). */
       discover_groups: {
         Args: { p_filters?: Record<string, unknown>; p_limit?: number };

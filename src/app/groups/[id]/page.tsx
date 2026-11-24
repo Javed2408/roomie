@@ -1,4 +1,4 @@
-import { ArrowLeft, Lock, Pencil } from "lucide-react";
+import { ArrowLeft, Lock, MessagesSquare, Pencil } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -14,6 +14,8 @@ import { Card } from "@/components/ui/card";
 import { GENDER_PREFERENCES, ROOM_TYPES } from "@/lib/constants/preferences";
 import { MOVE_IN_TIMEFRAMES } from "@/lib/constants/prompts";
 import { capacityLabel, GROUP_STATUS_LABELS } from "@/lib/group-display";
+import { unreadLabel } from "@/lib/group-chat";
+import { loadChatSummaries } from "@/lib/group-chats";
 import { budgetRangeLabel } from "@/lib/group-validation";
 import { loadGroupView } from "@/lib/groups";
 import { requireStudent } from "@/lib/profile";
@@ -55,6 +57,10 @@ async function GroupProfile({ params }: { params: PageProps<"/groups/[id]">["par
   const memberCount = members.length;
   const full = memberCount >= group.max_members;
   const isMember = mine?.status === "active";
+  // Only members have a chat (and only they can count its unread messages).
+  const unreadChat = isMember
+    ? unreadLabel((await loadChatSummaries(student.user.id)).find((row) => row.group_id === group.id)?.unread_count ?? 0)
+    : null;
   const admins = members.filter((member) => member.role === "admin");
   const successor =
     isAdmin && admins.length === 1
@@ -113,6 +119,19 @@ async function GroupProfile({ params }: { params: PageProps<"/groups/[id]">["par
         successor={successor ? firstName(successor) : null}
         memberCount={memberCount}
       />
+
+      {isMember && (
+        <ButtonLink href={`/groups/${group.id}/chat`} fullWidth>
+          <MessagesSquare aria-hidden="true" className="size-4" />
+          Open group chat
+          {unreadChat && (
+            <span className="bg-accent text-cream ml-1 rounded-full px-2 text-xs leading-5 tabular-nums">
+              {unreadChat}
+              <span className="sr-only"> unread</span>
+            </span>
+          )}
+        </ButtonLink>
+      )}
 
       {isAdmin && (
         <ButtonLink href={`/groups/${group.id}/edit`} variant="secondary" fullWidth>

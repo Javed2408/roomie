@@ -10,10 +10,13 @@ import { Avatar } from "@/components/ui/avatar";
 import { BottomNav } from "@/components/ui/bottom-nav";
 import { ButtonLink } from "@/components/ui/button";
 import { Wordmark } from "@/components/ui/wordmark";
+import { unreadLabel } from "@/lib/group-chat";
+import { loadChatList } from "@/lib/group-chats";
 import { capacityLabel, GROUP_STATUS_LABELS } from "@/lib/group-display";
 import { countUnreadNotifications, loadGroupDashboard } from "@/lib/groups";
 import { requireStudent } from "@/lib/profile";
 import { formatDate } from "@/lib/listing-display";
+import { timeAgo } from "@/lib/time";
 import { firstName } from "@/types/feed";
 
 export const metadata: Metadata = { title: "Your groups · Roomie" };
@@ -61,9 +64,10 @@ const OUTCOME: Record<string, string> = {
 
 async function Dashboard() {
   const student = await requireStudent();
-  const [dashboard, unread] = await Promise.all([
+  const [dashboard, unread, chats] = await Promise.all([
     loadGroupDashboard(student.user.id),
     countUnreadNotifications(student.user.id),
+    loadChatList(student.user.id),
   ]);
   const { memberOf, invitations, requests, outcomes, approvals, sentInvites } = dashboard;
   const photo = (group: { avatar_url: string | null; name: string }) => (
@@ -82,6 +86,34 @@ async function Dashboard() {
       <GroupsTabs current="mine" unread={unread} />
 
       <div className="space-y-7">
+        {chats.length > 0 && (
+          <Block title="Group chats" count={chats.length} empty="">
+            {chats.map((chat) => {
+              const badge = unreadLabel(chat.unread);
+              return (
+                <Row
+                  key={chat.group.id}
+                  href={`/groups/${chat.group.id}/chat`}
+                  left={photo(chat.group)}
+                  title={chat.group.name}
+                  subtitle={chat.preview}
+                  right={
+                    <span className="flex shrink-0 flex-col items-end gap-1">
+                      {chat.lastAt && <span className="text-muted text-xs">{timeAgo(chat.lastAt)}</span>}
+                      {badge && (
+                        <span className="bg-accent text-cream rounded-full px-2 text-xs leading-5 font-semibold tabular-nums">
+                          {badge}
+                          <span className="sr-only"> unread</span>
+                        </span>
+                      )}
+                    </span>
+                  }
+                />
+              );
+            })}
+          </Block>
+        )}
+
         <Block title="Invitations for you" count={invitations.length} empty="No invitations right now.">
           {invitations.map((entry) => (
             <Row

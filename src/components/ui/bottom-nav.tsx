@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { isEligibleUser } from "@/lib/eligibility";
+import { countUnreadChat } from "@/lib/group-chats";
 import { countUnreadNotifications } from "@/lib/groups";
 import { getPendingLikes } from "@/lib/matches";
 import { getCurrentUser } from "@/lib/profile";
@@ -22,15 +23,20 @@ async function GroupUpdates({ part }: { part: "dot" | "text" }) {
   if (!current || !isEligibleUser(current.user)) {
     return null;
   }
-  const count = await countUnreadNotifications(current.user.id);
-  if (count === 0) {
+  // Both are cached per request (and chat counts quietly fall back to 0).
+  const [updates, messages] = await Promise.all([
+    countUnreadNotifications(current.user.id),
+    countUnreadChat(current.user.id),
+  ]);
+  if (updates + messages === 0) {
     return null;
   }
   return part === "dot" ? (
     <span aria-hidden="true" className="bg-accent ring-cream absolute -top-0.5 -right-1 size-2.5 rounded-full ring-2" />
   ) : (
     <span className="sr-only">
-      , {count} new {count === 1 ? "update" : "updates"}
+      {updates > 0 ? `, ${updates} new ${updates === 1 ? "update" : "updates"}` : ""}
+      {messages > 0 ? `, ${messages === 100 ? "many" : messages} unread group ${messages === 1 ? "message" : "messages"}` : ""}
     </span>
   );
 }
