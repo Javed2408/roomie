@@ -1,4 +1,4 @@
-import { Building2, Check, ChevronRight, Eye, LogOut, Pencil } from "lucide-react";
+import { Building2, Check, ChevronRight, Eye, LogOut, Pencil, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -177,6 +177,25 @@ async function AccountDetails() {
           </Link>
         </section>
       )}
+
+      <section aria-labelledby="groups-heading">
+        <h2 id="groups-heading" className="font-display mb-3 text-xl font-semibold">
+          Groups
+        </h2>
+        <Link
+          href="/groups/mine"
+          className="bg-surface border-line rounded-card hover:border-charcoal/30 focus-visible:outline-accent flex items-center gap-3 border p-4 focus-visible:outline-2"
+        >
+          <span className="bg-forest-soft text-forest flex size-11 shrink-0 items-center justify-center rounded-full">
+            <Users aria-hidden="true" className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">Your groups</span>
+            <span className="text-muted block text-sm">Invitations, requests and the groups you&apos;re in</span>
+          </span>
+          <ChevronRight aria-hidden="true" className="text-muted size-4" />
+        </Link>
+      </section>
 
       <form action={signOut}>
         <Button type="submit" variant="secondary" fullWidth>

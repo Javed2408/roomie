@@ -32,6 +32,9 @@ export async function removeUnusedMedia(userId: string): Promise<void> {
       .map((url) => url.split(`/public/${MEDIA_BUCKET}/`)[1]),
   );
   const unused = files.data
+    // Group photos ("group-") are never cleaned up here: a group may use
+    // one even after its uploader can no longer see the group.
+    .filter((file) => !file.name.startsWith("group-"))
     .map((file) => `${userId}/${file.name}`)
     .filter((path) => !inUse.has(path));
   if (unused.length > 0) {

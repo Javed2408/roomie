@@ -1,6 +1,6 @@
 /**
  * TypeScript shapes of the database, matching
- * `supabase/migrations/` (001 to 014) exactly. Keep the two in sync: every
+ * `supabase/migrations/` (001 to 015) exactly. Keep the two in sync: every
  * change to the SQL needs the same change here.
  *
  * `Database` is in the format supabase-js expects, so queries are checked:
@@ -337,6 +337,69 @@ export type GroupRow = {
   is_discoverable: boolean;
   created_at: string;
   updated_at: string;
+  // --- Added in 015 ---
+  /** With budget_max, the group's budget range per person. */
+  budget_min: number | null;
+  /** Whether the group already has a place or is looking for one. */
+  housing_status: HousingStatus | null;
+  room_preference: RoomType | null;
+  /** Lifestyle the group expects, in its own words. */
+  lifestyle_notes: string | null;
+}
+
+export type GroupEventKind =
+  | "created"
+  | "invited"
+  | "invite_accepted"
+  | "invite_declined"
+  | "invite_cancelled"
+  | "requested"
+  | "request_approved"
+  | "request_declined"
+  | "request_withdrawn"
+  | "member_left"
+  | "member_removed"
+  | "role_changed";
+
+/** A membership change, recorded by the database (015). */
+export type GroupEventRow = {
+  id: string;
+  group_id: string;
+  group_name: string;
+  subject_id: string | null;
+  actor_id: string | null;
+  kind: GroupEventKind;
+  /** The invitation or request message, or the new role. */
+  detail: string | null;
+  created_at: string;
+}
+
+/** Someone to tell about a group event (015). Only read_at is writable. */
+export type NotificationRow = {
+  id: string;
+  recipient_id: string;
+  event_id: string;
+  read_at: string | null;
+  created_at: string;
+}
+
+/** A row from discover_groups() (015). */
+export type DiscoverGroupRow = {
+  group_id: string;
+  member_count: number;
+  /** The viewer's membership status, if any. */
+  my_status: GroupMembershipStatus | null;
+}
+
+/** A row from search_students_for_group() (015): public fields only. */
+export type GroupInviteCandidate = {
+  profile_id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  department: string | null;
+  year_of_study: number | null;
+  about: string | null;
+  membership: GroupMembershipStatus | null;
 }
 
 /** Change these only through the group functions (Database["public"]["Functions"]). */
@@ -351,6 +414,8 @@ export type GroupMemberRow = {
   joined_at: string | null;
   created_at: string;
   updated_at: string;
+  /** The note sent with an invitation or join request (015). */
+  message: string | null;
 }
 
 /**
@@ -426,6 +491,10 @@ type GroupInsert = Pick<GroupRow, "name" | "created_by"> &
       | "move_in_timeframe"
       | "preferred_bhk_types"
       | "is_discoverable"
+      | "budget_min"
+      | "housing_status"
+      | "room_preference"
+      | "lifestyle_notes"
     >
   >;
 /** Admins only. */
@@ -571,6 +640,20 @@ export type Database = {
         Update: never;
         Relationships: Relationship[];
       };
+      group_events: {
+        Row: GroupEventRow;
+        /** Written by the database only. */
+        Insert: never;
+        Update: never;
+        Relationships: Relationship[];
+      };
+      notifications: {
+        Row: NotificationRow;
+        Insert: never;
+        /** Marking as read only. */
+        Update: Pick<NotificationRow, "read_at">;
+        Relationships: Relationship[];
+      };
     };
     Views: {
       /** The newest message in each match you're part of (migration 004). */
@@ -620,12 +703,27 @@ export type Database = {
       is_group_admin: { Args: { p_group: string }; Returns: boolean };
       is_group_involved: { Args: { p_group: string }; Returns: boolean };
       // Group membership changes (010). Each returns the new status or role.
-      request_to_join_group: { Args: { p_group: string }; Returns: GroupMembershipStatus };
+      request_to_join_group: { Args: { p_group: string; p_message?: string | null }; Returns: GroupMembershipStatus };
       review_join_request: {
         Args: { p_group: string; p_profile: string; p_approve: boolean };
         Returns: GroupMembershipStatus;
       };
-      invite_to_group: { Args: { p_group: string; p_profile: string }; Returns: GroupMembershipStatus };
+      invite_to_group: {
+        Args: { p_group: string; p_profile: string; p_message?: string | null };
+        Returns: GroupMembershipStatus;
+      };
+      /** Withdraw an unanswered invitation (015). */
+      cancel_group_invite: { Args: { p_group: string; p_profile: string }; Returns: GroupMembershipStatus };
+      /** Eligible students an admin may invite (015). */
+      search_students_for_group: {
+        Args: { p_group: string; p_query: string; p_limit?: number };
+        Returns: GroupInviteCandidate[];
+      };
+      /** Discoverable groups for the signed-in student (015). */
+      discover_groups: {
+        Args: { p_filters?: Record<string, unknown>; p_limit?: number };
+        Returns: DiscoverGroupRow[];
+      };
       respond_to_group_invite: { Args: { p_group: string; p_accept: boolean }; Returns: GroupMembershipStatus };
       leave_group: { Args: { p_group: string }; Returns: GroupMembershipStatus };
       remove_group_member: { Args: { p_group: string; p_profile: string }; Returns: GroupMembershipStatus };

@@ -11,7 +11,7 @@ export const MEDIA_BUCKET = "roomie-media";
  * per-student folder but never mix: each has its own file prefix and its
  * own table (profile_photos vs listings.photos).
  */
-export type MediaKind = "avatar" | "photo" | "listing";
+export type MediaKind = "avatar" | "photo" | "listing" | "group";
 
 /**
  * Make a phone photo upload-friendly: scale it so its longest side is at

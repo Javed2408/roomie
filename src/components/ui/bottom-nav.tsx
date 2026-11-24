@@ -1,17 +1,39 @@
-import { Compass, HeartHandshake, User, type LucideIcon } from "lucide-react";
+import { Compass, HeartHandshake, User, Users, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { isEligibleUser } from "@/lib/eligibility";
+import { countUnreadNotifications } from "@/lib/groups";
 import { getPendingLikes } from "@/lib/matches";
 import { getCurrentUser } from "@/lib/profile";
 
-type Tab = "Discover" | "Matches" | "Account";
+type Tab = "Discover" | "Groups" | "Matches" | "Account";
 
 const TABS: Array<{ label: Tab; icon: LucideIcon; href: string }> = [
   { label: "Discover", icon: Compass, href: "/discover" },
+  { label: "Groups", icon: Users, href: "/groups" },
   { label: "Matches", icon: HeartHandshake, href: "/matches" },
   { label: "Account", icon: User, href: "/account" },
 ];
+
+/** The dot on Groups while a group update is unread. */
+async function GroupUpdates({ part }: { part: "dot" | "text" }) {
+  const current = await getCurrentUser();
+  if (!current || !isEligibleUser(current.user)) {
+    return null;
+  }
+  const count = await countUnreadNotifications(current.user.id);
+  if (count === 0) {
+    return null;
+  }
+  return part === "dot" ? (
+    <span aria-hidden="true" className="bg-accent ring-cream absolute -top-0.5 -right-1 size-2.5 rounded-full ring-2" />
+  ) : (
+    <span className="sr-only">
+      , {count} new {count === 1 ? "update" : "updates"}
+    </span>
+  );
+}
 
 /**
  * The orange dot on Matches while someone's like is waiting for an answer
@@ -44,7 +66,7 @@ async function PendingLikes({ part }: { part: "dot" | "text" }) {
 export function BottomNav({ current }: { current?: Tab }) {
   return (
     <nav aria-label="Main">
-      <ul className="grid grid-cols-3">
+      <ul className="grid grid-cols-4">
         {TABS.map(({ label, icon: Icon, href }) => {
           const isCurrent = label === current;
           return (
@@ -67,12 +89,22 @@ export function BottomNav({ current }: { current?: Tab }) {
                       <PendingLikes part="dot" />
                     </Suspense>
                   )}
+                  {label === "Groups" && (
+                    <Suspense fallback={null}>
+                      <GroupUpdates part="dot" />
+                    </Suspense>
+                  )}
                 </span>
                 <span>
                   {label}
                   {label === "Matches" && (
                     <Suspense fallback={null}>
                       <PendingLikes part="text" />
+                    </Suspense>
+                  )}
+                  {label === "Groups" && (
+                    <Suspense fallback={null}>
+                      <GroupUpdates part="text" />
                     </Suspense>
                   )}
                 </span>

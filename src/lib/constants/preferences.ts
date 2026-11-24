@@ -155,6 +155,7 @@ export const GROUP_MEMBERSHIP_STATUSES = [
   "declined",
   "left",
   "removed",
+  "cancelled",
 ] as const;
 export type GroupMembershipStatus = (typeof GROUP_MEMBERSHIP_STATUSES)[number];
 
