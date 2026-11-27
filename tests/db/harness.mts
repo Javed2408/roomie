@@ -16,7 +16,7 @@ import { PGlite } from "@electric-sql/pglite";
 
 const MIGRATIONS = join(import.meta.dirname, "..", "..", "supabase", "migrations");
 
-const SUPABASE_STAND_IN = `
+export const SUPABASE_STAND_IN = `
   create role anon nologin noinherit;
   create role authenticated nologin noinherit;
   create role service_role nologin noinherit bypassrls;

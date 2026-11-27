@@ -369,7 +369,10 @@ export type GroupEventRow = {
   subject_id: string | null;
   actor_id: string | null;
   kind: GroupEventKind;
-  /** The invitation or request message, or the new role. */
+  /**
+   * The invitation or request message (kept only while it's pending, 017),
+   * or the new role.
+   */
   detail: string | null;
   created_at: string;
 }
@@ -459,9 +462,21 @@ export type GroupMemberRow = {
   joined_at: string | null;
   created_at: string;
   updated_at: string;
-  /** The note sent with an invitation or join request (015). */
+  /**
+   * The note sent with an invitation or join request (015). Kept only while
+   * the row is pending, and not readable by students directly: use
+   * group_membership_notes() (017).
+   */
   message: string | null;
 }
+
+/** A row from group_membership_notes() (017). */
+export type GroupMembershipNoteRow = {
+  group_id: string;
+  profile_id: string;
+  status: "invited" | "requested";
+  message: string;
+};
 
 /**
  * The profile columns other users may read: everything except `email`.
@@ -798,6 +813,8 @@ export type Database = {
        * group they're active in.
        */
       group_message_blocked: { Args: { p_message: string }; Returns: boolean };
+      /** Pending invitation / request notes you may read in these groups (017). */
+      group_membership_notes: { Args: { p_groups: string[] }; Returns: GroupMembershipNoteRow[] };
       /** Discoverable groups for the signed-in student (015). */
       discover_groups: {
         Args: { p_filters?: Record<string, unknown>; p_limit?: number };

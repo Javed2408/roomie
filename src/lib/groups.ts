@@ -1,6 +1,7 @@
 import { cache } from "react";
 
 import { groupInsights, type GroupInsights, type GroupPerson } from "@/lib/group-compatibility";
+import { noteKey, notesInBatches } from "@/lib/group-notes";
 import type { GroupFilterState } from "@/lib/group-filters";
 import { getInterestCatalogue } from "@/lib/student";
 import { createClient } from "@/lib/supabase/server";
@@ -26,6 +27,21 @@ function must<T>(result: { data: T; error: { message: string } | null }, what: s
     throw new Error(`Couldn't load ${what}: ${result.error.message}`);
   }
   return result.data;
+}
+
+/**
+ * The membership columns students can read. The invitation / join-request
+ * note (message) is private: only loadNotes() reads it (017).
+ */
+const MEMBERSHIP_COLUMNS = "profile_id, role, status, invited_by, joined_at, updated_at";
+
+/**
+ * Pending notes the signed-in student may read in these groups (the
+ * database decides: every pending note in a group they run, and the one on
+ * their own pending row). Keyed by noteKey(), fetched in batches of 200.
+ */
+function loadNotes(supabase: Supabase, groupIds: string[]): Promise<Map<string, string>> {
+  return notesInBatches((p_groups) => supabase.rpc("group_membership_notes", { p_groups }), groupIds);
 }
 
 /** A student as groups show them: public profile, lifestyle and interests. */
@@ -198,10 +214,10 @@ export async function loadGroupView(userId: string, groupId: string): Promise<Gr
   const [groupResult, rowsResult, labels] = await Promise.all([
     supabase.from("groups").select("*").eq("id", groupId).maybeSingle(),
     // What the database lets you see: everything in your groups, your own
-    // row, and the active roster of discoverable groups.
+    // row, and the active roster of discoverable groups (never the notes).
     supabase
       .from("group_members")
-      .select("profile_id, role, status, message, invited_by, joined_at, updated_at")
+      .select(MEMBERSHIP_COLUMNS)
       .eq("group_id", groupId)
       .in("status", ["active", "requested", "invited"]),
     interestLabels(),
@@ -215,17 +231,23 @@ export async function loadGroupView(userId: string, groupId: string): Promise<Gr
     ?? must(
       await supabase
         .from("group_members")
-        .select("profile_id, role, status, message, invited_by, joined_at, updated_at")
+        .select(MEMBERSHIP_COLUMNS)
         .eq("group_id", groupId)
         .eq("profile_id", userId)
         .maybeSingle(),
       "your membership",
     );
   const isAdmin = ownRow?.status === "active" && ownRow.role === "admin";
-  const people = await loadPeople(
-    supabase,
-    [...rows.map((row) => row.profile_id), userId, ...(ownRow?.invited_by ? [ownRow.invited_by] : [])],
-  );
+  const ownPending = ownRow?.status === "invited" || ownRow?.status === "requested";
+  const [people, notes] = await Promise.all([
+    loadPeople(
+      supabase,
+      [...rows.map((row) => row.profile_id), userId, ...(ownRow?.invited_by ? [ownRow.invited_by] : [])],
+    ),
+    // Only admins and the student a pending note belongs to can read it.
+    isAdmin || ownPending ? loadNotes(supabase, [groupId]) : Promise.resolve(new Map<string, string>()),
+  ]);
+  const noteFor = (profileId: string) => notes.get(noteKey(groupId, profileId)) ?? null;
 
   const members = rows
     .filter((row) => row.status === "active")
@@ -245,7 +267,7 @@ export async function loadGroupView(userId: string, groupId: string): Promise<Gr
             return [
               {
                 ...person,
-                message: row.message,
+                message: noteFor(row.profile_id),
                 since: row.updated_at,
                 insights: withInsights
                   ? groupInsights(group, memberPeople, asGroupPerson(person), {
@@ -263,7 +285,7 @@ export async function loadGroupView(userId: string, groupId: string): Promise<Gr
   return {
     group,
     members,
-    mine: ownRow ? { status: ownRow.status, role: ownRow.role, message: ownRow.message, invited_by: ownRow.invited_by } : null,
+    mine: ownRow ? { status: ownRow.status, role: ownRow.role, message: noteFor(userId), invited_by: ownRow.invited_by } : null,
     isAdmin,
     requests: pending("requested", true),
     invites: pending("invited", false),
@@ -302,7 +324,7 @@ export async function loadGroupDashboard(userId: string): Promise<GroupDashboard
   const [mineResult, outcomesResult] = await Promise.all([
     supabase
       .from("group_members")
-      .select("group_id, status, role, message, updated_at")
+      .select("group_id, status, role, updated_at")
       .eq("profile_id", userId)
       .in("status", ["active", "invited", "requested"]),
     supabase
@@ -316,7 +338,11 @@ export async function loadGroupDashboard(userId: string): Promise<GroupDashboard
   const mine = must(mineResult, "your groups") ?? [];
   const groupIds = mine.map((row) => row.group_id);
   const adminOf = mine.filter((row) => row.status === "active" && row.role === "admin").map((row) => row.group_id);
-  const [groupsResult, activeResult, pendingResult] = await Promise.all([
+  // Notes: on your own pending rows, and on pending rows in groups you run.
+  const noteGroups = mine
+    .filter((row) => row.status !== "active" || adminOf.includes(row.group_id))
+    .map((row) => row.group_id);
+  const [groupsResult, activeResult, pendingResult, notes] = await Promise.all([
     groupIds.length ? supabase.from("groups").select("*").in("id", groupIds) : Promise.resolve({ data: [], error: null }),
     groupIds.length
       ? supabase.from("group_members").select("group_id").in("group_id", groupIds).eq("status", "active")
@@ -324,11 +350,13 @@ export async function loadGroupDashboard(userId: string): Promise<GroupDashboard
     adminOf.length
       ? supabase
           .from("group_members")
-          .select("group_id, profile_id, status, message, updated_at")
+          .select("group_id, profile_id, status, updated_at")
           .in("group_id", adminOf)
           .in("status", ["requested", "invited"])
       : Promise.resolve({ data: [], error: null }),
+    loadNotes(supabase, noteGroups),
   ]);
+  const noteFor = (groupId: string, profileId: string) => notes.get(noteKey(groupId, profileId)) ?? null;
   const groupById = new Map((must(groupsResult, "groups") ?? []).map((group) => [group.id, group]));
   const counts = new Map<string, number>();
   for (const row of must(activeResult, "members") ?? []) {
@@ -340,7 +368,7 @@ export async function loadGroupDashboard(userId: string): Promise<GroupDashboard
   const entries = mine.flatMap((row): MyGroupEntry[] => {
     const group = groupById.get(row.group_id);
     return group
-      ? [{ group, status: row.status, role: row.role, message: row.message, updatedAt: row.updated_at, memberCount: counts.get(row.group_id) ?? 0 }]
+      ? [{ group, status: row.status, role: row.role, message: noteFor(row.group_id, userId), updatedAt: row.updated_at, memberCount: counts.get(row.group_id) ?? 0 }]
       : [];
   });
   const byRecent = (a: { updatedAt: string }, b: { updatedAt: string }) => b.updatedAt.localeCompare(a.updatedAt);
@@ -363,7 +391,7 @@ export async function loadGroupDashboard(userId: string): Promise<GroupDashboard
     approvals: pending
       .filter((row) => row.status === "requested")
       .flatMap(withPerson)
-      .map(({ group, person, row }) => ({ group, person, message: row.message, since: row.updated_at })),
+      .map(({ group, person, row }) => ({ group, person, message: noteFor(row.group_id, row.profile_id), since: row.updated_at })),
     sentInvites: pending
       .filter((row) => row.status === "invited")
       .flatMap(withPerson)
