@@ -61,7 +61,7 @@
    Get-FileHash $env:TEMP\roomie-017.sql, $env:TEMP\roomie-018.sql -Algorithm SHA256
    ```
    Expected: `18D12B56850CAD31B71B5AD25E583A6C40412701CAB51BC065FD52BE9F67A690` and `A5B34AB2FA65D88FFBF8031B2E5E20AD3122AD0DDCE94F50EA7090F82F72B042`.
-5. **Confirm the checks pass on that exact commit.** Expected: **412 of 412 tests**, 0 lint problems, the type check passes, the build succeeds.
+5. **Confirm the checks pass on that exact commit.** Expected: **427 of 427 tests**, 0 lint problems, the type check passes, the build succeeds.
    ```powershell
    npm test
    ```
@@ -313,14 +313,29 @@ from (
    - P6 must equal the preflight counts;
    - V6 must be all true.
 
-   If any is wrong, don't run 018, and see section 5.
+   If any is wrong, don't run 018, and see section 2.3.
+
+   **Then tell the API to reload its schema.** 017 adds a function, `group_membership_notes()`, that the new app calls through Supabase's API (PostgREST). The API keeps its own copy of the schema. Supabase normally reloads that copy after a migration; this makes sure. Run this on its own in the SQL Editor. It changes no data, and it's safe to repeat:
+   ```sql
+   notify pgrst, 'reload schema';
+   ```
+   Sending it doesn't prove the reload happened, or that it's finished. Step 9 checks that.
 6. **Apply 018**, in its own SQL Editor tab, as `postgres`, straight after 017 is verified:
    - paste the whole of `$env:TEMP\roomie-018.sql` and run it once. It takes milliseconds;
    - running D1 again isn't needed while the freeze holds;
    - don't paste 017 and 018 together. That also works (tested), but a failure in 018 would then undo 017 too.
 7. **Verify 018** with V7 (section 3). It must be exactly one row of `1, true, 0, ok`. A `FAIL: …` in `check_state` means stop and see section 2.3.
 8. **Deploy or start the matching app immediately.** Don't leave production running the old app against the new schema.
-9. **Run V1–V7 once more** (section 3), still with traffic stopped, to confirm the final state with the app in place.
+9. **Run V1–V7 once more** (section 3), still with traffic stopped, to confirm the final state with the app in place. **Then confirm the API can see the new function** before anyone is let back in:
+   - **Preferred: through the new app,** if you can reach it privately (a preview URL or a maintenance bypass; see step 10). As test account A, open **Your groups** and any group page. Both must load. An error mentioning `PGRST202` or "schema cache" means the API hasn't reloaded yet.
+   - **Without private access: ask the API directly.** Use the project's publishable key, the value of `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, which is public by design:
+     ```powershell
+     curl.exe -s "https://roxtxipioqtggnqyhpgs.supabase.co/rest/v1/rpc/group_membership_notes?p_groups=%7B%7D" -H "apikey: PASTE-THE-PUBLISHABLE-KEY"
+     ```
+     - **Expected:** a permission error (code `42501`, "permission denied for function group_membership_notes"). Signed-out callers aren't allowed to run this function, so that error shows the API found it.
+     - **`PGRST202`** ("Could not find the function … in the schema cache") means the API hasn't reloaded. Wait a minute, send the `notify` from step 5 again, and repeat.
+     - **This check wasn't tested against the real API;** only the database side was tested locally. So treat anything other than that clear permission error as "don't reopen yet", and investigate.
+   - **If the API still can't see the function,** keep traffic frozen and see section 2.3.
 10. **Smoke tests** (section 4).
     - If your hosting lets you reach the new deployment privately (a preview URL or a maintenance bypass), do them now, before reopening.
     - If not, reopen in step 11 and do them immediately after, ready to use section 5.
@@ -336,7 +351,33 @@ from (
 | 018 fails with a lock error | 017 stays applied and complete. Keep the app stopped, run D2 and D1 again, then re-run 018 |
 | 018 fails with any other error | 017 stays applied and complete, and the app works with or without 018. Continue with steps 8–11 only if the owner accepts the open former-admin gap (section 6); otherwise stay frozen and investigate |
 | V7 isn't `1, true, 0, ok` after 018 | `FAIL: 018 is not applied`: 018 didn't take effect. While still frozen, run D1 and then 018 again (it's idempotent); if V7 still fails, stay frozen and investigate. `FAIL: policy missing` or `FAIL: another permissive SELECT policy…`: stay frozen and investigate before reopening (section 1.3 explains each state) |
-| The app fails to load group pages after deploy | Check that the deployed commit is the release commit (`loadNotes` / `group_membership_notes`). Re-run V1–V7. Prefer a fix-forward; R017 reopens F-01 |
+| The API can't see `group_membership_notes()` (`PGRST202`, "schema cache") | Keep traffic frozen. Send `notify pgrst, 'reload schema';` again, wait a minute, and repeat the check in step 9. If it persists, check in the Supabase dashboard that the API service is healthy, and investigate. Don't reopen: group pages would fail |
+| The app deployment itself fails (017 and 018 both succeeded) | Keep traffic frozen and follow section 2.4 |
+| The app fails to load group pages after deploy | Check that the deployed commit is the release commit (`loadNotes` / `group_membership_notes`). Re-run V1–V7 and the API check in step 9. Prefer a fix-forward; R017 reopens F-01 |
+
+### 2.4 If the app deployment fails after 017 and 018 succeeded
+
+**Where things stand:**
+- The database is in its final, intended state.
+- **The old app can't work against it.** Its group pages and **Your groups** read `group_members.message`, which 017 refuses (`permission denied`).
+- The new app isn't running.
+
+1. **Keep traffic frozen.** Don't reopen with the old app: group pages would fail for admins and for students with pending invitations or requests.
+2. **Retry or repair the new deployment first.** It's the only path that keeps both fixes.
+   - Redeploy the same release commit.
+   - Check the hosting build log, the environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) and any runtime errors.
+   - The database needs nothing. Don't run 017 or 018 again for this.
+   - Once it's up, continue from step 9.
+3. **If it can't be fixed within the window you announced, choose:**
+   - **Stay frozen until the new app works.** Both fixes stay in place; students can't use Roomie meanwhile.
+   - **Go back to the old app.** That needs **R017** first (section 6.2), with D2 and D1 run first as in section 2.2; with the freeze still on, they should show nothing.
+     - R017 restores the table-wide read the old app needs.
+     - **R017 reopens F-01:** active members can again read the pending notes in their groups, and any eligible student can read stale invitation notes on active rows of discoverable groups. Notes already cleared stay cleared.
+     - Then restore the previous app version, the deployment before the release commit. Confirm group pages load, record that F-01 is open again, reopen, and plan a new window.
+4. **R18 is not part of this recovery.**
+   - **The old app works with 018 in place.** 018 only changes which history rows former admins can see; it changes no column or function the old app uses.
+   - **Use R18 only if 018 itself is the problem,** such as a V7 failure that can't be cleared, and only if the owner accepts what it reopens: former admins can again read pending join-request notes through notifications they received while they were admins.
+   - **If R017 has already reopened F-01,** that former-admin gap is the smaller exposure, so there's no reason to add it.
 
 ## 3. Verification SQL (read-only, as `postgres`)
 
@@ -525,10 +566,10 @@ Both rollbacks change policies and triggers, so drain first, exactly as in secti
 
 ### 6.1 Roll back 018 (R18)
 
-- **What it does:** restores 015's policy exactly (tested).
+- **What it removes:** only 018's change. It replaces the `group_events: involved people read` policy with 015's exact version (tested). Nothing from 017 is touched.
 - **What it reopens:** the former-admin gap. An admin who has since been demoted, has left or was removed can again read pending join-request notes through notifications they received while an admin.
 - **The app:** no change is needed.
-- **Afterwards:** P7 must again read `1, false, 0, ok`.
+- **Afterwards:** P7 must read `1, false, 0, ok`, and V7 then reads `FAIL: 018 is not applied …`, as expected.
 
 ```sql
 -- R18. Emergency rollback of 018 (reopens the former-admin exception)
@@ -548,10 +589,25 @@ create policy "group_events: involved people read"
 
 ### 6.2 Roll back 017 (R017)
 
-- **What it does:** takes the schema back to 016's behaviour, so the old app works again.
-- **What it reopens:** **the F-01 leak**. Use it only as an emergency step, then fix forward.
-- **Afterwards:** redeploy the previous app commit.
-- **What remains:** tested after R18, this removes 017's functions, triggers, constraint and the 018 policy. Table-level grants become identical to 016, so students' table-wide read is back. The only thing left from 017 is its per-column read grants for `authenticated`, which the restored table-wide grant already covers.
+- **What it removes, all from 017 (tested):**
+  - the four triggers: `group_members_clear_settled_note`, `group_members_clear_settled_event_notes`, `group_members_clear_deleted_event_notes` and `group_events_clear_orphaned_note`;
+  - the constraint `group_members_note_only_while_pending`;
+  - the four functions, including `group_membership_notes()`, which the new app needs;
+  - and it gives students back table-wide read access on `group_members`, which is what the old app needs.
+- **What it does not touch:**
+  - **018's policy on `group_events`.** If R18 hasn't run, V7 still reads `1, true, 0, ok`. To remove 018 as well, run R18 first.
+  - 017's per-column read grants for `authenticated`. They're now redundant, because the table-wide grant covers every column.
+  - the `anon` role, which had no rights on `group_members` before 017 either.
+  - notes 017 already cleared (section 7).
+- **What it reopens:** **F-01.** Active members can again read the pending notes in their groups, and eligible students can read stale invitation notes on active rows of discoverable groups. Use it only as an emergency step, then fix forward.
+- **The app:** the new app stops working, because its note function is gone. Redeploy the previous app commit straight after.
+- **Afterwards, verify** (read-only; these are the same values as before the window):
+  - P2 is `false`;
+  - P3 is `true, true, false`;
+  - V2 returns no rows: none of the four functions is left;
+  - V3 lists none of the four triggers above;
+  - V4 returns no rows;
+  - the policy state is P7 `1, false, 0, ok` if R18 ran first, or V7 `1, true, 0, ok` if 018 was kept.
 
 ```sql
 -- R017. Emergency structural rollback of 017 (reopens F-01; does NOT restore cleared notes)
@@ -584,14 +640,16 @@ Clearing these notes is the intended outcome, so recovering them should almost n
 |---|---|---|
 | Release commit recorded; 017 and 018 hashes `OK` from the commit (1.1 step 3) | | |
 | Byte-exact copies made and hashed (1.1 step 4) | | |
-| Checks on the commit: 412 tests, lint, types, build | | |
+| Checks on the commit: 427 tests, lint, types, build | | |
 | Backup or recovery point recorded | | |
 | Preflight P1–P7 recorded (P7 = `1, false, 0, ok`) | | |
 | App and background work stopped; D2 shows no app transactions | | |
 | D1 returned no rows immediately before 017 | | |
 | 017 applied once as `postgres`; step 5 verification correct | | |
+| Schema reload sent after 017 (step 5) | | |
 | 018 applied once as `postgres`; V7 = `1, true, 0, ok` | | |
 | Matching app deployed | | |
+| API sees `group_membership_notes()` (step 9) | | |
 | V1–V7, P5 and P6 re-checked | | |
 | Smoke tests 1–10 | | |
 | Traffic reopened | | |

@@ -1,3 +1,5 @@
+> **SUPERSEDED: do not use this document for deployment.** The canonical, self-contained runbook for migrations 017 and 018 is [`ROOMIE_PHASE_7A_7B_DEPLOYMENT_RUNBOOK.md`](ROOMIE_PHASE_7A_7B_DEPLOYMENT_RUNBOOK.md). This file is kept only as a historical record. It doesn't cover migration 018, and its test count, checks and step order are out of date.
+
 # Phase 7A deployment runbook: migration 017 and the matching app
 
 **Approval:** use this only with explicit approval for the production change. Nothing here has been run against production. Every SQL block below was checked for syntax and for the expected results against a local test database (PGlite) built from migrations 001–017, not against production. 017 itself was also run against concurrent transactions on a disposable local PostgreSQL 17.12 (Docker); see the completion report.

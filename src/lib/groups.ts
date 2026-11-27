@@ -1,6 +1,7 @@
 import { cache } from "react";
 
 import { groupInsights, type GroupInsights, type GroupPerson } from "@/lib/group-compatibility";
+import { noteKey, notesInBatches } from "@/lib/group-notes";
 import type { GroupFilterState } from "@/lib/group-filters";
 import { getInterestCatalogue } from "@/lib/student";
 import { createClient } from "@/lib/supabase/server";
@@ -34,20 +35,13 @@ function must<T>(result: { data: T; error: { message: string } | null }, what: s
  */
 const MEMBERSHIP_COLUMNS = "profile_id, role, status, invited_by, joined_at, updated_at";
 
-const noteKey = (groupId: string, profileId: string) => `${groupId}:${profileId}`;
-
 /**
  * Pending notes the signed-in student may read in these groups (the
  * database decides: every pending note in a group they run, and the one on
- * their own pending row). Keyed by noteKey().
+ * their own pending row). Keyed by noteKey(), fetched in batches of 200.
  */
-async function loadNotes(supabase: Supabase, groupIds: string[]): Promise<Map<string, string>> {
-  const ids = [...new Set(groupIds)];
-  if (ids.length === 0) {
-    return new Map();
-  }
-  const notes = must(await supabase.rpc("group_membership_notes", { p_groups: ids }), "notes") ?? [];
-  return new Map(notes.map((note) => [noteKey(note.group_id, note.profile_id), note.message]));
+function loadNotes(supabase: Supabase, groupIds: string[]): Promise<Map<string, string>> {
+  return notesInBatches((p_groups) => supabase.rpc("group_membership_notes", { p_groups }), groupIds);
 }
 
 /** A student as groups show them: public profile, lifestyle and interests. */

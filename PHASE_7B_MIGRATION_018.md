@@ -1,3 +1,5 @@
+> **SUPERSEDED for deployment: do not run the window from this document.** The canonical, self-contained runbook for migrations 017 and 018 is [`ROOMIE_PHASE_7A_7B_DEPLOYMENT_RUNBOOK.md`](ROOMIE_PHASE_7A_7B_DEPLOYMENT_RUNBOOK.md). This file is kept as the technical record of 018. Its section 6 (sequencing, P7, V7 and the test count) is out of date. In particular, its P7 and V7 are an earlier version that doesn't check the migration stage.
+
 # Phase 7B: migration 018 (former admins and pending request notes)
 
 **Status: implemented and tested locally only.**

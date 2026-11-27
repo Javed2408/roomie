@@ -33,7 +33,7 @@ const IMAGE = process.env.ROOMIE_PG_IMAGE ?? "postgres:17-alpine";
 const CONTAINER = `roomie-concurrency-${process.pid}`;
 const MIGRATIONS = join(import.meta.dirname, "..", "..", "supabase", "migrations");
 const FILE_017 = "/migrations/017_group_membership_notes_privacy.sql";
-const RUNBOOK = join(import.meta.dirname, "..", "..", "PHASE_7A_DEPLOYMENT_RUNBOOK.md");
+const RUNBOOK = join(import.meta.dirname, "..", "..", "ROOMIE_PHASE_7A_7B_DEPLOYMENT_RUNBOOK.md");
 const BS = "\\";
 
 // --- Docker and psql plumbing -------------------------------------------------
